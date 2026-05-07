@@ -35,12 +35,12 @@ function bordered(lines: string[], width: number): string[] {
   const contentWidth = Math.max(20, totalWidth - 4)
   const horizontal = "─".repeat(totalWidth - 2)
   return [
-    `┌${horizontal}┐`,
+    `╭${horizontal}╮`,
     ...lines.map(line => {
       const content = truncate(line, contentWidth)
       return `│ ${content}${" ".repeat(Math.max(0, contentWidth - visibleLength(content)))} │`
     }),
-    `└${horizontal}┘`,
+    `╰${horizontal}╯`,
   ]
 }
 
