@@ -5,7 +5,7 @@ import { listLoopStates, saveLoopState, type WorkLoopState } from "./state-store
 
 type TUI = { requestRender: () => void; terminal: { columns: number; rows: number } }
 type Component = { render: (width: number) => string[]; handleInput?: (data: string) => void; invalidate?: () => void; dispose?: () => void }
-type Done = (result: void) => void
+type Done = () => void
 
 type ObserverLike = { poll: () => void }
 
@@ -64,7 +64,7 @@ export class SeWorkLoopManagerOverlay implements Component {
     this.observer?.poll()
   }
 
-  private focused(): WorkLoopState | null {
+  private selectedLoop(): WorkLoopState | null {
     return this.loops[this.selected] ?? null
   }
 
@@ -74,7 +74,7 @@ export class SeWorkLoopManagerOverlay implements Component {
   }
 
   private stopFocused(): void {
-    const loop = this.focused()
+    const loop = this.selectedLoop()
     if (!loop) return this.setFooter("No loop selected")
     const stopped = markStopRequested(this.cwd, loop.id)
     this.refresh()
@@ -82,7 +82,7 @@ export class SeWorkLoopManagerOverlay implements Component {
   }
 
   private dismissFocused(): void {
-    const loop = this.focused()
+    const loop = this.selectedLoop()
     if (!loop) return this.setFooter("No loop selected")
     if (loop.status === "active") return this.setFooter("Stop active loops before dismissing")
     const dismissed = dismissLoop(this.cwd, loop.id)
@@ -91,7 +91,7 @@ export class SeWorkLoopManagerOverlay implements Component {
   }
 
   private resumeFocused(): void {
-    const loop = this.focused()
+    const loop = this.selectedLoop()
     if (!loop) return this.setFooter("No loop selected")
     if (loop.status === "active") return this.setFooter("Loop is already active")
     const runningLoopId = runtimeState().runningLoopId
@@ -107,7 +107,7 @@ export class SeWorkLoopManagerOverlay implements Component {
   }
 
   handleInput(data: string): void {
-    if (data === "q" || data === "\u001b") return this.done(undefined)
+    if (data === "q" || data === "\u001b") return this.done()
     if (data === "j" || data === "\u001b[B") {
       this.selected = Math.min(this.selected + 1, Math.max(0, this.loops.length - 1))
       return this.tui.requestRender()
