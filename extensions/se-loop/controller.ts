@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { relative, resolve } from "node:path"
 import type { AgentEndEvent, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
 import { nextRunnableUnit, parsePlanMarkdown, type LoopUnit } from "./plan-parser.ts"
-import { appendLoopEvent, completedUnitIds, createInitialState, loadLoopState, resolveLoopState, saveLoopState, updateUnitStatus, type WorkLoopState } from "./state-store.ts"
+import { appendLoopEvent, completedUnitIds, createInitialState, resolveLoopState, saveLoopState, updateUnitStatus, type WorkLoopState } from "./state-store.ts"
 import { verifyUnit } from "./verification.ts"
 
 interface IterationResult {
@@ -102,11 +102,6 @@ When this unit is complete, end with a concise summary containing:
 
 function statePathFor(state: WorkLoopState): string {
   return resolve(state.cwd, ".context", "software-engineering", "se-work-loop", state.id, "state.json")
-}
-
-function findUnit(units: LoopUnit[], unitId: string | null | undefined): LoopUnit | null {
-  if (!unitId) return null
-  return units.find(unit => unit.id === unitId) ?? null
 }
 
 function nextUnitFromState(state: WorkLoopState, units: LoopUnit[]): LoopUnit | null {
