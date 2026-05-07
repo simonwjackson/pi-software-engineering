@@ -76,7 +76,54 @@ function discoverFromRepoGuidance(cwd: string): VerifyCommandDiscovery | null {
   return null
 }
 
-export function discoverVerifyCommand(cwd: string): VerifyCommandDiscovery {
+function extractFrontmatter(planMarkdown: string): string | null {
+  const match = planMarkdown.match(/^---\n([\s\S]*?)\n---\n/)
+  return match?.[1] ?? null
+}
+
+function parseFrontmatterVerifyCommand(frontmatter: string): string | null {
+  const topLevel = frontmatter.match(/^verify_command:\s*(.+?)\s*$/m)
+  if (topLevel) return stripQuotes(topLevel[1])
+
+  const nested = frontmatter.match(/^loop:\s*\n(?:[^\S\n]+.*\n)*?[^\S\n]+verify_command:\s*(.+?)\s*$/m)
+  if (nested) return stripQuotes(nested[1])
+
+  return null
+}
+
+function stripQuotes(value: string): string {
+  return value.replace(/^['"]|['"]$/g, "").trim()
+}
+
+function parseHandoffVerifyCommand(planMarkdown: string): string | null {
+  const handoffMatch = planMarkdown.match(/##\s+Execution Handoff[\s\S]*?(?=\n##\s|$)/i)
+  const section = handoffMatch?.[0] ?? planMarkdown
+
+  const labelMatch = section.match(/(?:\*\*Verification command:?\*\*|Verification command:?)\s*[`"']?([^`"'\n]+)[`"']?/i)
+  if (labelMatch) return stripQuotes(labelMatch[1])
+
+  return null
+}
+
+export function discoverVerifyCommandFromPlan(planMarkdown: string): VerifyCommandDiscovery | null {
+  const frontmatter = extractFrontmatter(planMarkdown)
+  if (frontmatter) {
+    const fromFrontmatter = parseFrontmatterVerifyCommand(frontmatter)
+    if (fromFrontmatter) return { command: fromFrontmatter, source: "plan frontmatter verify_command", confidence: "high" }
+  }
+
+  const fromHandoff = parseHandoffVerifyCommand(planMarkdown)
+  if (fromHandoff) return { command: fromHandoff, source: "plan Execution Handoff", confidence: "high" }
+
+  return null
+}
+
+export function discoverVerifyCommand(cwd: string, planMarkdown?: string): VerifyCommandDiscovery {
+  if (planMarkdown) {
+    const fromPlan = discoverVerifyCommandFromPlan(planMarkdown)
+    if (fromPlan) return fromPlan
+  }
+
   return discoverFromPackageJson(cwd)
     ?? discoverFromMise(cwd)
     ?? discoverFromRepoGuidance(cwd)

@@ -39,9 +39,11 @@ async function startLoop(args: string, ctx: ExtensionCommandContext) {
   }
 
   const planPath = resolve(ctx.cwd, parsedArgs.planPath)
+  let planMarkdown: string
   let plan
   try {
-    plan = parsePlanMarkdown(readFileSync(planPath, "utf8"))
+    planMarkdown = readFileSync(planPath, "utf8")
+    plan = parsePlanMarkdown(planMarkdown)
   } catch (error) {
     notify(ctx, error instanceof Error ? error.message : String(error), "error")
     return
@@ -49,12 +51,19 @@ async function startLoop(args: string, ctx: ExtensionCommandContext) {
 
   const verifyDiscovery = parsedArgs.verifyCommand
     ? { command: parsedArgs.verifyCommand, source: "--verify-command", confidence: "high" as const }
-    : discoverVerifyCommand(ctx.cwd)
+    : discoverVerifyCommand(ctx.cwd, planMarkdown)
 
   if (!verifyDiscovery.command) {
     notify(
       ctx,
-      "Could not discover a target-project verify command. Re-run with `--verify-command \"<command>\"` so the loop has a concrete completion gate before it creates state.",
+      [
+        "No verify command found for this loop. Resolve in plan, then re-run.",
+        "Resolution order:",
+        "  1. --verify-command \"<command>\" on the slash command",
+        "  2. `verify_command:` in the plan frontmatter",
+        "  3. `**Verification command:** <command>` in an `## Execution Handoff` section of the plan",
+        "  4. Auto-discovery from package.json / mise.toml / AGENTS.md / README.md",
+      ].join("\n"),
       "warning",
     )
     return
