@@ -41,6 +41,65 @@ function statusColor(theme: Theme, state: WorkLoopState, value: string): string 
   return theme.fg("dim", value)
 }
 
+function textFromContent(content: unknown): string {
+  if (!Array.isArray(content)) return ""
+  return content
+    .filter((part): part is { type: string; text: string } => {
+      return !!part && typeof part === "object" && "type" in part && "text" in part && part.type === "text" && typeof part.text === "string"
+    })
+    .map(part => part.text.trim())
+    .filter(Boolean)
+    .join("\n")
+}
+
+function compactToolArgs(args: unknown): string {
+  if (!args || typeof args !== "object") return ""
+  const record = args as Record<string, unknown>
+  const preferred = ["path", "command", "oldText", "newText"]
+    .map(key => typeof record[key] === "string" ? `${key}: ${String(record[key]).replace(/\s+/g, " ").slice(0, 90)}` : null)
+    .filter(Boolean)
+  if (preferred.length > 0) return preferred.join(" · ")
+  return Object.keys(record).slice(0, 4).join(", ")
+}
+
+export function humanizeJsonLog(raw: string): string[] {
+  const rendered: string[] = []
+  for (const line of raw.replace(/\r\n/g, "\n").split("\n")) {
+    if (!line.trim()) continue
+
+    let event: Record<string, unknown>
+    try {
+      event = JSON.parse(line) as Record<string, unknown>
+    } catch {
+      rendered.push(line)
+      continue
+    }
+
+    const type = event.type
+    if (type === "tool_execution_start") {
+      const toolName = typeof event.toolName === "string" ? event.toolName : "tool"
+      const args = compactToolArgs(event.args)
+      rendered.push(args ? `› ${toolName} ${args}` : `› ${toolName}`)
+      continue
+    }
+
+    if (type === "tool_execution_end") {
+      if (event.isError === true) rendered.push("✗ tool failed")
+      continue
+    }
+
+    if (type === "message_end" && event.message && typeof event.message === "object") {
+      const message = event.message as { role?: string; content?: unknown; errorMessage?: string }
+      const text = textFromContent(message.content)
+      if (message.errorMessage) rendered.push(`✗ ${message.errorMessage}`)
+      if (message.role === "assistant" && text) rendered.push(...text.split("\n"))
+      continue
+    }
+  }
+
+  return rendered.length > 0 ? rendered : ["(no human-readable log output yet)"]
+}
+
 export class SeWorkLoopManagerOverlay implements Component {
   private readonly tui: TUI
   private readonly theme: Theme
@@ -189,11 +248,10 @@ export class SeWorkLoopManagerOverlay implements Component {
     if (!logPath) return { title: "No background child log yet", lines: ["No background child log has been written for this loop yet."] }
 
     try {
-      const rawLines = readFileSync(logPath, "utf8").replace(/\r\n/g, "\n").split("\n")
-      const nonEmpty = rawLines.length > 0 ? rawLines : ["(empty log)"]
-      const end = Math.max(0, nonEmpty.length - this.logScrollFromBottom)
+      const humanLines = humanizeJsonLog(readFileSync(logPath, "utf8"))
+      const end = Math.max(0, humanLines.length - this.logScrollFromBottom)
       const start = Math.max(0, end - rows)
-      return { title: basename(logPath), lines: nonEmpty.slice(start, end) }
+      return { title: basename(logPath), lines: humanLines.slice(start, end) }
     } catch (error) {
       return { title: basename(logPath), lines: [error instanceof Error ? error.message : String(error)] }
     }
