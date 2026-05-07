@@ -30,17 +30,18 @@ function pad(value: string, width: number): string {
   return `${value}${" ".repeat(Math.max(0, width - visibleLength(value)))}`
 }
 
-function bordered(lines: string[], width: number): string[] {
+function bordered(theme: Theme, lines: string[], width: number): string[] {
   const totalWidth = Math.max(24, width)
   const contentWidth = Math.max(20, totalWidth - 4)
   const horizontal = "─".repeat(totalWidth - 2)
+  const border = (value: string) => theme.fg("dim", value)
   return [
-    `╭${horizontal}╮`,
+    border(`╭${horizontal}╮`),
     ...lines.map(line => {
       const content = truncate(line, contentWidth)
-      return `│ ${content}${" ".repeat(Math.max(0, contentWidth - visibleLength(content)))} │`
+      return `${border("│")} ${content}${" ".repeat(Math.max(0, contentWidth - visibleLength(content)))} ${border("│")}`
     }),
-    `╰${horizontal}╯`,
+    border(`╰${horizontal}╯`),
   ]
 }
 
@@ -62,6 +63,13 @@ function statusColor(theme: Theme, state: WorkLoopState, value: string): string 
   if (state.status === "paused") return theme.fg("warning", value)
   if (state.status === "active") return theme.fg("accent", value)
   return theme.fg("dim", value)
+}
+
+function logLineColor(theme: Theme, line: string): string {
+  if (line.startsWith("✗")) return theme.fg("error", line)
+  if (line.startsWith("›")) return theme.fg("accent", line)
+  if (line.startsWith("(")) return theme.fg("dim", line)
+  return theme.fg("text", line)
 }
 
 function textFromContent(content: unknown): string {
@@ -294,13 +302,13 @@ export class SeWorkLoopManagerOverlay implements Component {
       const { title, lines: logLines } = this.logLines(loop, rows)
       lines.push(this.theme.fg("muted", `${shortId(loop.id)} · ${title}`))
       for (const line of logLines.slice(-rows)) {
-        lines.push(truncate(line || " ", inner))
+        lines.push(logLineColor(this.theme, truncate(line || " ", inner)))
       }
     }
 
     lines.push(this.theme.fg("dim", "─".repeat(Math.min(inner, width))))
     lines.push(this.footer ? this.theme.fg("muted", this.footer) : this.theme.fg("dim", "Viewing background child log."))
-    return bordered(lines, width)
+    return bordered(this.theme, lines, width)
   }
 
   render(width: number): string[] {
@@ -339,7 +347,7 @@ export class SeWorkLoopManagerOverlay implements Component {
 
     lines.push(this.theme.fg("dim", "─".repeat(Math.min(inner, width))))
     lines.push(this.footer ? this.theme.fg("muted", this.footer) : this.theme.fg("dim", "State is preserved under .context/software-engineering/se-work-loop/"))
-    return bordered(lines, width)
+    return bordered(this.theme, lines, width)
   }
 
   invalidate(): void {}
