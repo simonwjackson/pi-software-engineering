@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
-import { createStateFromPlan, currentUnitForState, handleAgentEnd, markStopRequested, reconcileStateWithPlan, runLoop } from "./controller.ts"
+import { createStateFromPlan, currentUnitForState, handleAgentEnd, markStopRequested, reconcileStateWithPlan, runLoop, runtimeState } from "./controller.ts"
 import { parsePlanMarkdown } from "./plan-parser.ts"
 import { runRuntimeProbe } from "./runtime-probe.ts"
-import { loadLoopState, resolveLoopState } from "./state-store.ts"
+import { appendLoopEvent, loadLoopState, resolveLoopState, type WorkLoopState } from "./state-store.ts"
 import { discoverVerifyCommand, parseLoopArgs } from "./verify-command-discovery.ts"
 
 function notify(ctx: ExtensionCommandContext, message: string, level: "info" | "warning" | "error" = "info") {
@@ -31,11 +31,11 @@ function formatStatus(cwd: string, id?: string): string {
   ].filter(Boolean).join("\n")
 }
 
-async function startLoop(args: string, ctx: ExtensionCommandContext) {
+async function prepareLoop(args: string, ctx: ExtensionCommandContext): Promise<{ state: WorkLoopState; verifySource: string } | null> {
   const parsedArgs = parseLoopArgs(args)
   if (parsedArgs.error || !parsedArgs.planPath) {
     notify(ctx, parsedArgs.error ?? "Missing plan path", "error")
-    return
+    return null
   }
 
   const planPath = resolve(ctx.cwd, parsedArgs.planPath)
@@ -46,7 +46,7 @@ async function startLoop(args: string, ctx: ExtensionCommandContext) {
     plan = parsePlanMarkdown(planMarkdown)
   } catch (error) {
     notify(ctx, error instanceof Error ? error.message : String(error), "error")
-    return
+    return null
   }
 
   const verifyDiscovery = parsedArgs.verifyCommand
@@ -66,13 +66,13 @@ async function startLoop(args: string, ctx: ExtensionCommandContext) {
       ].join("\n"),
       "warning",
     )
-    return
+    return null
   }
 
   const probe = await runRuntimeProbe(ctx)
   if (!probe.ok) {
     notify(ctx, probe.message, "error")
-    return
+    return null
   }
 
   const controllerSessionFile = ctx.sessionManager.getSessionFile?.() ?? null
@@ -84,8 +84,48 @@ async function startLoop(args: string, ctx: ExtensionCommandContext) {
   })
   state = reconcileStateWithPlan(state, plan.units)
 
-  notify(ctx, `Starting SE work loop ${state.id} with verify command from ${verifyDiscovery.source}: ${verifyDiscovery.command}`, "info")
-  await runLoop(ctx, state)
+  return { state, verifySource: verifyDiscovery.source }
+}
+
+async function startLoop(args: string, ctx: ExtensionCommandContext) {
+  const prepared = await prepareLoop(args, ctx)
+  if (!prepared) return
+
+  notify(ctx, `Starting SE work loop ${prepared.state.id} with verify command from ${prepared.verifySource}: ${prepared.state.verifyCommand}`, "info")
+  await runLoop(ctx, prepared.state)
+}
+
+async function startLoopBackground(args: string, ctx: ExtensionCommandContext) {
+  const runningLoopId = runtimeState().runningLoopId
+  if (runningLoopId) {
+    notify(ctx, `Another SE work loop is already running: ${runningLoopId}`, "warning")
+    return
+  }
+
+  const prepared = await prepareLoop(args, ctx)
+  if (!prepared) return
+
+  const state = appendLoopEvent(prepared.state, { type: "background_started", message: "Loop started in background mode." })
+  notify(
+    ctx,
+    [
+      `Started background SE work loop ${state.id}.`,
+      `Verify command from ${prepared.verifySource}: ${state.verifyCommand}`,
+      `Inspect with /se-work-loop-status ${state.id}`,
+      `Stop with /se-work-loop-stop ${state.id}`,
+    ].join("\n"),
+    "info",
+  )
+
+  void runLoop(ctx, state).catch(error => {
+    const message = error instanceof Error ? error.message : String(error)
+    try {
+      const latest = loadLoopState(state.cwd, state.id)
+      appendLoopEvent({ ...latest, status: "blocked" }, { type: "background_error", message })
+    } catch {
+      appendLoopEvent({ ...state, status: "blocked" }, { type: "background_error", message })
+    }
+  })
 }
 
 async function resumeLoop(args: string, ctx: ExtensionCommandContext) {
@@ -115,6 +155,11 @@ export default function seLoopExtension(pi: ExtensionAPI) {
   pi.registerCommand("se-work-loop", {
     description: "Run an SE plan through fresh-context implementation-unit iterations",
     handler: async (args, ctx) => startLoop(args ?? "", ctx),
+  })
+
+  pi.registerCommand("se-work-loop-background", {
+    description: "Start an SE work loop in background mode",
+    handler: async (args, ctx) => startLoopBackground(args ?? "", ctx),
   })
 
   pi.registerCommand("se-work-loop-status", {

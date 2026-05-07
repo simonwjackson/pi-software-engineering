@@ -14,13 +14,14 @@ Use regular `se-work` for short or interactive work. Use `se-work-loop` when a p
 
 ```text
 /se-work-loop <plan-path> [--verify-command "command"]
+/se-work-loop-background <plan-path> [--verify-command "command"]
 /se-work-loop-status [id]
 /se-work-loop-stop <id>
 /se-work-loop-resume <id>
 /se-work-loop-probe
 ```
 
-`/se-work-loop` starts a loop. The other commands are intentionally separate slash commands so they are discoverable and do not hide behavior behind opaque subcommands.
+`/se-work-loop` starts an attached loop and awaits completion in the invoking command. `/se-work-loop-background` starts the same process-local loop without awaiting completion, then returns control so the user can inspect/stop it later. The other commands are intentionally separate slash commands so they are discoverable and do not hide behavior behind opaque subcommands.
 
 ## Verification Model
 
@@ -67,6 +68,7 @@ Examples:
 
 ```text
 /se-work-loop docs/plans/2026-05-06-001-feat-native-se-work-loop-plan.md --verify-command "node --test tests/se-loop-*.test.mjs"
+/se-work-loop-background docs/plans/2026-05-06-001-feat-native-se-work-loop-plan.md
 /se-work-loop-status
 /se-work-loop-stop 20260506T120000Z-feat-add-native-se-work-loop
 /se-work-loop-resume 20260506T120000Z-feat-add-native-se-work-loop
@@ -80,8 +82,11 @@ The parent chat stays small. The loop controller:
 2. Persists loop state under `.context/software-engineering/se-work-loop/<id>/`.
 3. Creates a fresh child session for the current runnable U-ID.
 4. Sends only the plan path, current unit fields, loop state path, and verification command to the child.
-5. Records a compact summary and verification result to disk.
-6. Advances, pauses, blocks, or completes based on the persisted state.
+5. Records a compact summary and per-unit file check result to disk.
+6. Runs the loop-level verify command once after all units complete.
+7. Advances, pauses, blocks, or completes based on the persisted state.
+
+Background MVP note: `/se-work-loop-background` is process-local. It does not yet spawn a daemon runner that survives Pi process exit/restart.
 
 The plan remains a decision artifact. Do not edit the plan body to track progress.
 
