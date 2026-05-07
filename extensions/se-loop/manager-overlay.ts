@@ -11,14 +11,37 @@ type Done = () => void
 
 type ObserverLike = { poll: () => void }
 
+function stripAnsi(value: string): string {
+  return value.replace(/\u001b\[[0-9;]*m/g, "")
+}
+
+function visibleLength(value: string): number {
+  return stripAnsi(value).length
+}
+
 function truncate(value: string, width: number): string {
-  if (value.length <= width) return value
-  if (width <= 3) return value.slice(0, Math.max(0, width))
-  return `${value.slice(0, width - 3)}...`
+  if (visibleLength(value) <= width) return value
+  const plain = stripAnsi(value)
+  if (width <= 3) return plain.slice(0, Math.max(0, width))
+  return `${plain.slice(0, width - 3)}...`
 }
 
 function pad(value: string, width: number): string {
-  return `${value}${" ".repeat(Math.max(0, width - value.length))}`
+  return `${value}${" ".repeat(Math.max(0, width - visibleLength(value)))}`
+}
+
+function bordered(lines: string[], width: number): string[] {
+  const totalWidth = Math.max(24, width)
+  const contentWidth = Math.max(20, totalWidth - 4)
+  const horizontal = "─".repeat(totalWidth - 2)
+  return [
+    `┌${horizontal}┐`,
+    ...lines.map(line => {
+      const content = truncate(line, contentWidth)
+      return `│ ${content}${" ".repeat(Math.max(0, contentWidth - visibleLength(content)))} │`
+    }),
+    `└${horizontal}┘`,
+  ]
 }
 
 function shortId(id: string): string {
@@ -277,7 +300,7 @@ export class SeWorkLoopManagerOverlay implements Component {
 
     lines.push(this.theme.fg("dim", "─".repeat(Math.min(inner, width))))
     lines.push(this.footer ? this.theme.fg("muted", this.footer) : this.theme.fg("dim", "Viewing background child log."))
-    return lines
+    return bordered(lines, width)
   }
 
   render(width: number): string[] {
@@ -316,7 +339,7 @@ export class SeWorkLoopManagerOverlay implements Component {
 
     lines.push(this.theme.fg("dim", "─".repeat(Math.min(inner, width))))
     lines.push(this.footer ? this.theme.fg("muted", this.footer) : this.theme.fg("dim", "State is preserved under .context/software-engineering/se-work-loop/"))
-    return lines
+    return bordered(lines, width)
   }
 
   invalidate(): void {}
