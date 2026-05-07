@@ -22,6 +22,15 @@ Use regular `se-work` for short or interactive work. Use `se-work-loop` when a p
 
 `/se-work-loop` starts a loop. The other commands are intentionally separate slash commands so they are discoverable and do not hide behavior behind opaque subcommands.
 
+## Verification Model
+
+The loop has two distinct gates:
+
+- **Per-unit file gate** — after each unit's child session ends, the controller checks the unit's declared `Files:` paths exist in the working tree. This is a cheap, deterministic per-iteration health check. If any expected file is missing, the loop blocks on that unit.
+- **End-of-loop completion gate** — after the last dependency-ready unit completes, the controller runs the loop-level verify command once. If it passes, the loop is `complete`; if it fails, the loop is `blocked`.
+
+The loop-level verify command does **not** run after every unit. That avoids a common pitfall where a completion-shape command (e.g. `grep -q 'U2 complete' tmp/file`) would block U1 simply because U2 has not run yet.
+
 ## Verification Command
 
 Every loop needs a target-project verification command before durable state is created. The loop resolves it in this order, stopping at the first hit:
