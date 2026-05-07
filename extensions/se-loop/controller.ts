@@ -223,6 +223,16 @@ export function markStopRequested(cwd: string, id?: string): WorkLoopState | nul
   return saveLoopState({ ...state, stopRequested: true, status: state.status === "active" ? "active" : "paused" })
 }
 
+export function dismissLoop(cwd: string, id?: string): WorkLoopState | null {
+  const state = resolveLoopState(cwd, id)
+  if (!state) return null
+  if (state.status === "active") return state
+  return appendLoopEvent({ ...state, status: "cancelled", currentUnitId: null, stopRequested: false }, {
+    type: "dismissed",
+    message: "Loop dismissed from active UI.",
+  })
+}
+
 export function createStateFromPlan(input: {
   cwd: string
   planPath: string

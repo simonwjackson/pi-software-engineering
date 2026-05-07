@@ -1,5 +1,7 @@
 import type { Theme } from "@mariozechner/pi-coding-agent"
-import type { Component, TUI } from "@mariozechner/pi-tui"
+
+type TUI = { requestRender: () => void }
+type Component = { render: (width: number) => string[]; invalidate?: () => void; dispose?: () => void }
 import { currentUnitForState } from "./controller.ts"
 import { listLoopStates, type WorkLoopState } from "./state-store.ts"
 

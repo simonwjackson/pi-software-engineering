@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
-import { createStateFromPlan, currentUnitForState, handleAgentEnd, markStopRequested, reconcileStateWithPlan, runLoop, runtimeState } from "./controller.ts"
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent"
+import { createStateFromPlan, currentUnitForState, dismissLoop, handleAgentEnd, markStopRequested, reconcileStateWithPlan, runLoop, runtimeState } from "./controller.ts"
 import { runLoopInBackground } from "./background-runner.ts"
 import { SeWorkLoopObserver, SeWorkLoopWidget } from "./observer.ts"
 import { parsePlanMarkdown } from "./plan-parser.ts"
@@ -97,7 +97,7 @@ async function startLoop(args: string, ctx: ExtensionCommandContext) {
   await runLoop(ctx, prepared.state)
 }
 
-async function startLoopBackground(args: string, ctx: ExtensionCommandContext) {
+async function startLoopBackground(args: string, ctx: ExtensionCommandContext, onStarted: () => void = () => {}) {
   const runningLoopId = runtimeState().runningLoopId
   if (runningLoopId) {
     notify(ctx, `Another SE work loop is already running: ${runningLoopId}`, "warning")
@@ -108,8 +108,7 @@ async function startLoopBackground(args: string, ctx: ExtensionCommandContext) {
   if (!prepared) return
 
   const state = appendLoopEvent(prepared.state, { type: "background_started", message: "Loop started in background mode." })
-  observer?.poll()
-  ensureWidget(ctx)
+  onStarted()
   notify(
     ctx,
     [
@@ -156,7 +155,7 @@ export default function seLoopExtension(pi: ExtensionAPI) {
   let widgetActive = false
   let widgetUnsubscribe: (() => void) | null = null
 
-  function ensureWidget(ctx: ExtensionCommandContext) {
+  function ensureWidget(ctx: ExtensionContext) {
     if (!ctx.hasUI || !observer) return
     const hasLoops = observer.getLoops().length > 0
     if (!hasLoops) {
@@ -215,7 +214,10 @@ export default function seLoopExtension(pi: ExtensionAPI) {
 
   pi.registerCommand("se-work-loop-background", {
     description: "Start an SE work loop in background mode",
-    handler: async (args, ctx) => startLoopBackground(args ?? "", ctx),
+    handler: async (args, ctx) => startLoopBackground(args ?? "", ctx, () => {
+      observer?.poll()
+      ensureWidget(ctx)
+    }),
   })
 
   pi.registerCommand("se-work-loop-status", {
@@ -240,6 +242,22 @@ export default function seLoopExtension(pi: ExtensionAPI) {
   pi.registerCommand("se-work-loop-resume", {
     description: "Resume a paused or blocked SE work loop",
     handler: async (args, ctx) => resumeLoop(args ?? "", ctx),
+  })
+
+  pi.registerCommand("se-work-loop-dismiss", {
+    description: "Dismiss a paused or blocked SE work loop from active UI",
+    handler: async (args, ctx) => {
+      const state = dismissLoop(ctx.cwd, loopIdArg(args ?? ""))
+      observer?.poll()
+      ensureWidget(ctx)
+      if (!state) {
+        notify(ctx, "No SE work loop found to dismiss", "warning")
+      } else if (state.status === "active") {
+        notify(ctx, `SE work loop ${state.id} is active; stop it before dismissing it`, "warning")
+      } else {
+        notify(ctx, `Dismissed SE work loop ${state.id}`, "info")
+      }
+    },
   })
 
   pi.registerCommand("se-work-loop-probe", {

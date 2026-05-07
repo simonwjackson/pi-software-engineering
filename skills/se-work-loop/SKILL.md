@@ -18,6 +18,7 @@ Use regular `se-work` for short or interactive work. Use `se-work-loop` when a p
 /se-work-loop-status [id]
 /se-work-loop-stop <id>
 /se-work-loop-resume <id>
+/se-work-loop-dismiss <id>
 /se-work-loop-probe
 ```
 
@@ -72,6 +73,7 @@ Examples:
 /se-work-loop-status
 /se-work-loop-stop 20260506T120000Z-feat-add-native-se-work-loop
 /se-work-loop-resume 20260506T120000Z-feat-add-native-se-work-loop
+/se-work-loop-dismiss 20260506T120000Z-feat-add-native-se-work-loop
 ```
 
 ## Context Model
@@ -110,5 +112,5 @@ Run `/se-work-loop-probe` when validating a new Pi version. It checks whether th
 
 - **No U-IDs found**: run `se-plan` or update the plan to use `### U1. Name` headings.
 - **No verify command found**: re-run with `--verify-command "..."`.
-- **Verification failed**: inspect `/se-work-loop-status <id>`, fix the blocker, then `/se-work-loop-resume <id>`.
+- **Verification failed**: inspect `/se-work-loop-status <id>`, fix the blocker, then `/se-work-loop-resume <id>`. If the loop is stale/no longer relevant, `/se-work-loop-dismiss <id>` hides it from active UI while preserving state files.
 - **Plan changed while paused**: resume reconciles U-IDs and blocks if saved units disappeared.
