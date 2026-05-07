@@ -3,6 +3,7 @@ import { resolve } from "node:path"
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
 import { createStateFromPlan, currentUnitForState, handleAgentEnd, markStopRequested, reconcileStateWithPlan, runLoop, runtimeState } from "./controller.ts"
 import { runLoopInBackground } from "./background-runner.ts"
+import { SeWorkLoopObserver, SeWorkLoopWidget } from "./observer.ts"
 import { parsePlanMarkdown } from "./plan-parser.ts"
 import { runRuntimeProbe } from "./runtime-probe.ts"
 import { appendLoopEvent, loadLoopState, resolveLoopState, type WorkLoopState } from "./state-store.ts"
@@ -107,6 +108,8 @@ async function startLoopBackground(args: string, ctx: ExtensionCommandContext) {
   if (!prepared) return
 
   const state = appendLoopEvent(prepared.state, { type: "background_started", message: "Loop started in background mode." })
+  observer?.poll()
+  ensureWidget(ctx)
   notify(
     ctx,
     [
@@ -149,6 +152,58 @@ async function resumeLoop(args: string, ctx: ExtensionCommandContext) {
 }
 
 export default function seLoopExtension(pi: ExtensionAPI) {
+  let observer: SeWorkLoopObserver | null = null
+  let widgetActive = false
+  let widgetUnsubscribe: (() => void) | null = null
+
+  function ensureWidget(ctx: ExtensionCommandContext) {
+    if (!ctx.hasUI || !observer) return
+    const hasLoops = observer.getLoops().length > 0
+    if (!hasLoops) {
+      if (widgetActive) {
+        ctx.ui.setWidget?.("se-work-loop", undefined)
+        ctx.ui.setStatus?.("se-work-loop", "")
+        widgetActive = false
+      }
+      return
+    }
+
+    const focused = observer.getFocused()
+    if (focused) {
+      const completed = focused.units.filter(unit => unit.status === "completed").length
+      ctx.ui.setStatus?.("se-work-loop", `SE loop ${focused.status} ${completed}/${focused.units.length}`)
+    }
+
+    if (!widgetActive) {
+      ctx.ui.setWidget?.(
+        "se-work-loop",
+        (tui, theme) => new SeWorkLoopWidget(tui, theme, observer!),
+        { placement: "belowEditor" },
+      )
+      widgetActive = true
+    }
+  }
+
+  pi.on("session_start", async (_event, ctx) => {
+    if (!ctx.hasUI) return
+    observer = new SeWorkLoopObserver(ctx.cwd)
+    observer.start()
+    widgetUnsubscribe = observer.onChange(() => ensureWidget(ctx))
+    ensureWidget(ctx)
+  })
+
+  pi.on("session_shutdown", async (_event, ctx) => {
+    widgetUnsubscribe?.()
+    widgetUnsubscribe = null
+    observer?.stop()
+    observer = null
+    if (ctx.hasUI) {
+      ctx.ui.setWidget?.("se-work-loop", undefined)
+      ctx.ui.setStatus?.("se-work-loop", "")
+    }
+    widgetActive = false
+  })
+
   pi.on("agent_end", async event => {
     handleAgentEnd(event)
   })
