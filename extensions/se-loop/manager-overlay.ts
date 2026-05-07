@@ -1,7 +1,9 @@
+import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { basename, join } from "node:path"
 import type { Theme } from "@mariozechner/pi-coding-agent"
 import { currentUnitForState, dismissLoop, markStopRequested, runtimeState } from "./controller.ts"
 import { runLoopInBackground } from "./background-runner.ts"
-import { listLoopStates, saveLoopState, type WorkLoopState } from "./state-store.ts"
+import { listLoopStates, loopLocation, saveLoopState, type WorkLoopState } from "./state-store.ts"
 
 type TUI = { requestRender: () => void; terminal: { columns: number; rows: number } }
 type Component = { render: (width: number) => string[]; handleInput?: (data: string) => void; invalidate?: () => void; dispose?: () => void }
@@ -48,6 +50,8 @@ export class SeWorkLoopManagerOverlay implements Component {
   private loops: WorkLoopState[] = []
   private selected = 0
   private footer = ""
+  private view: "list" | "log" = "list"
+  private logScrollFromBottom = 0
 
   constructor(input: { tui: TUI; theme: Theme; cwd: string; done: Done; observer?: ObserverLike | null }) {
     this.tui = input.tui
@@ -107,6 +111,31 @@ export class SeWorkLoopManagerOverlay implements Component {
   }
 
   handleInput(data: string): void {
+    if (this.view === "log") {
+      if (data === "q" || data === "\u001b" || data === "l") {
+        this.view = "list"
+        this.logScrollFromBottom = 0
+        return this.tui.requestRender()
+      }
+      if (data === "j" || data === "\u001b[B") {
+        this.logScrollFromBottom = Math.max(0, this.logScrollFromBottom - 1)
+        return this.tui.requestRender()
+      }
+      if (data === "k" || data === "\u001b[A") {
+        this.logScrollFromBottom += 1
+        return this.tui.requestRender()
+      }
+      if (data === "G") {
+        this.logScrollFromBottom = 0
+        return this.tui.requestRender()
+      }
+      if (data === "R") {
+        this.refresh()
+        return this.setFooter("Refreshed log")
+      }
+      return
+    }
+
     if (data === "q" || data === "\u001b") return this.done()
     if (data === "j" || data === "\u001b[B") {
       this.selected = Math.min(this.selected + 1, Math.max(0, this.loops.length - 1))
@@ -124,6 +153,11 @@ export class SeWorkLoopManagerOverlay implements Component {
       this.selected = Math.max(0, this.loops.length - 1)
       return this.tui.requestRender()
     }
+    if (data === "l") {
+      this.view = "log"
+      this.logScrollFromBottom = 0
+      return this.tui.requestRender()
+    }
     if (data === "s") return this.stopFocused()
     if (data === "d") return this.dismissFocused()
     if (data === "r") return this.resumeFocused()
@@ -133,13 +167,70 @@ export class SeWorkLoopManagerOverlay implements Component {
     }
   }
 
+  private activeLogPath(loop: WorkLoopState): string | null {
+    const location = loopLocation(loop.cwd, loop.id)
+    const current = loop.currentUnitId ?? currentUnitForState(loop)
+    const preferred = join(location.loopDir, `background-${current}.log`)
+    if (existsSync(preferred)) return preferred
+
+    try {
+      const candidates = readdirSync(location.loopDir)
+        .filter(name => /^background-U\d+\.log$/.test(name))
+        .sort()
+      const latest = candidates.at(-1)
+      return latest ? join(location.loopDir, latest) : null
+    } catch {
+      return null
+    }
+  }
+
+  private logLines(loop: WorkLoopState, rows: number): { title: string; lines: string[] } {
+    const logPath = this.activeLogPath(loop)
+    if (!logPath) return { title: "No background child log yet", lines: ["No background child log has been written for this loop yet."] }
+
+    try {
+      const rawLines = readFileSync(logPath, "utf8").replace(/\r\n/g, "\n").split("\n")
+      const nonEmpty = rawLines.length > 0 ? rawLines : ["(empty log)"]
+      const end = Math.max(0, nonEmpty.length - this.logScrollFromBottom)
+      const start = Math.max(0, end - rows)
+      return { title: basename(logPath), lines: nonEmpty.slice(start, end) }
+    } catch (error) {
+      return { title: basename(logPath), lines: [error instanceof Error ? error.message : String(error)] }
+    }
+  }
+
+  private renderLog(width: number, inner: number, rows: number): string[] {
+    this.refresh()
+    const loop = this.selectedLoop()
+    const lines: string[] = []
+    lines.push(this.theme.fg("accent", "SE Work Loop Logs"))
+    lines.push(this.theme.fg("dim", "j/k scroll · G bottom · R refresh · l/q/Esc back"))
+    lines.push(this.theme.fg("dim", "─".repeat(Math.min(inner, width))))
+
+    if (!loop) {
+      lines.push(this.theme.fg("dim", "No loop selected."))
+    } else {
+      const { title, lines: logLines } = this.logLines(loop, rows)
+      lines.push(this.theme.fg("muted", `${shortId(loop.id)} · ${title}`))
+      for (const line of logLines.slice(-rows)) {
+        lines.push(truncate(line || " ", inner))
+      }
+    }
+
+    lines.push(this.theme.fg("dim", "─".repeat(Math.min(inner, width))))
+    lines.push(this.footer ? this.theme.fg("muted", this.footer) : this.theme.fg("dim", "Viewing background child log."))
+    return lines
+  }
+
   render(width: number): string[] {
     const inner = Math.max(40, width - 4)
-    const rows = Math.max(8, Math.floor(this.tui.terminal.rows * 0.6) - 6)
+    const rows = Math.max(8, Math.floor(this.tui.terminal.rows * 0.6) - 8)
+    if (this.view === "log") return this.renderLog(width, inner, rows)
+
     const lines: string[] = []
 
     lines.push(this.theme.fg("accent", "SE Work Loop Manager"))
-    lines.push(this.theme.fg("dim", "j/k select · s stop · r resume bg · d dismiss · R refresh · q close"))
+    lines.push(this.theme.fg("dim", "j/k select · l logs · s stop · r resume bg · d dismiss · R refresh · q close"))
     lines.push(this.theme.fg("dim", "─".repeat(Math.min(inner, width))))
 
     if (this.loops.length === 0) {
