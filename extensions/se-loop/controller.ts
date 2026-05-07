@@ -100,7 +100,7 @@ When this unit is complete, end with a concise summary containing:
 `
 }
 
-function statePathFor(state: WorkLoopState): string {
+export function statePathFor(state: WorkLoopState): string {
   return resolve(state.cwd, ".context", "software-engineering", "se-work-loop", state.id, "state.json")
 }
 

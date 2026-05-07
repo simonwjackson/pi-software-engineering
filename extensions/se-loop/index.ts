@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
 import { createStateFromPlan, currentUnitForState, handleAgentEnd, markStopRequested, reconcileStateWithPlan, runLoop, runtimeState } from "./controller.ts"
+import { runLoopInBackground } from "./background-runner.ts"
 import { parsePlanMarkdown } from "./plan-parser.ts"
 import { runRuntimeProbe } from "./runtime-probe.ts"
 import { appendLoopEvent, loadLoopState, resolveLoopState, type WorkLoopState } from "./state-store.ts"
@@ -117,7 +118,7 @@ async function startLoopBackground(args: string, ctx: ExtensionCommandContext) {
     "info",
   )
 
-  void runLoop(ctx, state).catch(error => {
+  void runLoopInBackground(state).catch(error => {
     const message = error instanceof Error ? error.message : String(error)
     try {
       const latest = loadLoopState(state.cwd, state.id)

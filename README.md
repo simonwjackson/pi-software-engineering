@@ -31,7 +31,7 @@ For long-running implementation plans, the package provides a native loop contro
 
 The loop parses `se-plan` implementation units (`U1`, `U2`, ...), runs each unit in a fresh child session, persists progress under `.context/software-engineering/se-work-loop/`, and gates advancement on file checks plus a target-project verification command. If no `--verify-command` is supplied, the extension tries to discover one from project conventions before creating durable loop state.
 
-Use regular `se-work` for short or interactive work; use `se-work-loop` when the main chat should stay compact while multiple plan units run across fresh contexts. Use `se-work-loop-background` for the same process-local loop behavior without awaiting completion in the invoking command; inspect or stop it with the status/stop commands.
+Use regular `se-work` for short or interactive work; use `se-work-loop` when the main chat should stay compact while multiple plan units run across fresh contexts. Use `se-work-loop-background` for the same process-local loop behavior without awaiting completion in the invoking command; it spawns child Pi runs through `nix shell nixpkgs#bun nixpkgs#nodejs --command bun x @mariozechner/pi-coding-agent` so the live TUI session is not replaced. Override the launcher with `SE_WORK_LOOP_PI_COMMAND` when needed.
 
 ## Development
 
