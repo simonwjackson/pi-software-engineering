@@ -3,6 +3,7 @@ import { resolve } from "node:path"
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent"
 import { createStateFromPlan, currentUnitForState, dismissLoop, handleAgentEnd, markStopRequested, reconcileStateWithPlan, runLoop, runtimeState } from "./controller.ts"
 import { runLoopInBackground } from "./background-runner.ts"
+import { SeWorkLoopManagerOverlay } from "./manager-overlay.ts"
 import { SeWorkLoopObserver, SeWorkLoopWidget } from "./observer.ts"
 import { parsePlanMarkdown } from "./plan-parser.ts"
 import { runRuntimeProbe } from "./runtime-probe.ts"
@@ -257,6 +258,23 @@ export default function seLoopExtension(pi: ExtensionAPI) {
       } else {
         notify(ctx, `Dismissed SE work loop ${state.id}`, "info")
       }
+    },
+  })
+
+  pi.registerCommand("se-work-loop-manager", {
+    description: "Open the SE work-loop manager overlay",
+    handler: async (_args, ctx) => {
+      if (!ctx.hasUI) {
+        notify(ctx, formatStatus(ctx.cwd), "info")
+        return
+      }
+
+      await ctx.ui.custom?.((tui, theme, _kb, done) => {
+        return new SeWorkLoopManagerOverlay({ tui, theme, cwd: ctx.cwd, done, observer })
+      }, {
+        overlay: true,
+        overlayOptions: { width: "70%", maxHeight: "70%", anchor: "center", margin: 1 },
+      })
     },
   })
 

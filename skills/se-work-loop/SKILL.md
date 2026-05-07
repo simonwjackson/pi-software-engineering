@@ -19,6 +19,7 @@ Use regular `se-work` for short or interactive work. Use `se-work-loop` when a p
 /se-work-loop-stop <id>
 /se-work-loop-resume <id>
 /se-work-loop-dismiss <id>
+/se-work-loop-manager
 /se-work-loop-probe
 ```
 
@@ -74,6 +75,7 @@ Examples:
 /se-work-loop-stop 20260506T120000Z-feat-add-native-se-work-loop
 /se-work-loop-resume 20260506T120000Z-feat-add-native-se-work-loop
 /se-work-loop-dismiss 20260506T120000Z-feat-add-native-se-work-loop
+/se-work-loop-manager
 ```
 
 ## Context Model
@@ -88,7 +90,7 @@ The parent chat stays small. The loop controller:
 6. Runs the loop-level verify command once after all units complete.
 7. Advances, pauses, blocks, or completes based on the persisted state.
 
-Background MVP note: `/se-work-loop-background` is process-local. It spawns each child Pi run with `nix shell nixpkgs#bun nixpkgs#nodejs --command bun x @mariozechner/pi-coding-agent` instead of `ctx.newSession()`, so it should not replace the live foreground TUI session. Active/paused/blocked loops appear in a small below-editor widget and status token that poll durable state. Override the launcher with `SE_WORK_LOOP_PI_COMMAND` if the local environment needs a different Pi invocation. It does not yet spawn a daemon runner that survives Pi process exit/restart.
+Background MVP note: `/se-work-loop-background` is process-local. It spawns each child Pi run with `nix shell nixpkgs#bun nixpkgs#nodejs --command bun x @mariozechner/pi-coding-agent` instead of `ctx.newSession()`, so it should not replace the live foreground TUI session. Active/paused/blocked loops appear in a small below-editor widget and status token that poll durable state. Use `/se-work-loop-manager` to stop, resume, refresh, or dismiss loops without copying IDs. Override the launcher with `SE_WORK_LOOP_PI_COMMAND` if the local environment needs a different Pi invocation. It does not yet spawn a daemon runner that survives Pi process exit/restart.
 
 The plan remains a decision artifact. Do not edit the plan body to track progress.
 

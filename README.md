@@ -28,6 +28,7 @@ For long-running implementation plans, the package provides a native loop contro
 /se-work-loop-stop <id>
 /se-work-loop-resume <id>
 /se-work-loop-dismiss <id>
+/se-work-loop-manager
 ```
 
 The loop parses `se-plan` implementation units (`U1`, `U2`, ...), runs each unit in a fresh child session, persists progress under `.context/software-engineering/se-work-loop/`, and gates advancement on file checks plus a target-project verification command. If no `--verify-command` is supplied, the extension tries to discover one from project conventions before creating durable loop state.
