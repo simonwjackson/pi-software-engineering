@@ -15,6 +15,22 @@ This package includes:
 - selected engineering skills adapted from Matt Pocock's `skills` project
 - `pi-subagents` as a bundled dependency from https://github.com/nicobailon/pi-subagents
 - a small extension that exposes packaged SE agents to `pi-subagents` through managed symlinks in `~/.pi/agent/agents`
+- a native SE work-loop extension for running saved plans through fresh-context implementation-unit iterations
+
+## SE Work Loop
+
+For long-running implementation plans, the package provides a native loop controller rather than depending on an external Ralph-style package.
+
+```text
+/se-work-loop <plan-path> [--verify-command "command"]
+/se-work-loop-status [id]
+/se-work-loop-stop <id>
+/se-work-loop-resume <id>
+```
+
+The loop parses `se-plan` implementation units (`U1`, `U2`, ...), runs each unit in a fresh child session, persists progress under `.context/software-engineering/se-work-loop/`, and gates advancement on file checks plus a target-project verification command. If no `--verify-command` is supplied, the extension tries to discover one from project conventions before creating durable loop state.
+
+Use regular `se-work` for short or interactive work; use `se-work-loop` when the main chat should stay compact while multiple plan units run across fresh contexts.
 
 ## Development
 
