@@ -24,9 +24,11 @@
     "skills"
   ],
   "dependencies": {
+    "pi-ask-user": "latest",
     "pi-subagents": "latest"
   },
   "bundledDependencies": [
+    "pi-ask-user",
     "pi-subagents"
   ],
   "peerDependencies": {
@@ -57,10 +59,12 @@
     "extensions": [
       "./extensions/software-engineering.ts",
       "./extensions/se-loop/index.ts",
+      "./node_modules/pi-ask-user/index.ts",
       "./node_modules/pi-subagents/src/extension/index.ts"
     ],
     "skills": [
-      "./skills"
+      "./skills",
+      "./node_modules/pi-ask-user/skills"
     ],
     "prompts": [
       "./node_modules/pi-subagents/prompts"
