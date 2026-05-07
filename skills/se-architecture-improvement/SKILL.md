@@ -1,5 +1,5 @@
 ---
-name: architecture-improvement
+name: se-architecture-improvement
 description: Find deepening opportunities in a codebase using project context, established domain language, documented decisions, and public-contract test posture. Use when the user wants to improve architecture, find refactoring opportunities, consolidate tightly-coupled modules, or make a codebase more testable and agent-navigable.
 ---
 

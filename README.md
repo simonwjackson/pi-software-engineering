@@ -24,4 +24,4 @@ Package agents are canonical in `agents/`. Package skills are canonical in `skil
 
 ## Attribution
 
-The `tdd`, `prototype`, `zoom-out`, `architecture-improvement`, and `challenge-plan` skills are adapted from Matt Pocock's MIT-licensed engineering skills: https://github.com/mattpocock/skills.
+The `se-tdd`, `se-prototype`, `se-zoom-out`, `se-architecture-improvement`, and `se-challenge-plan` skills are adapted from Matt Pocock's MIT-licensed engineering skills: https://github.com/mattpocock/skills.

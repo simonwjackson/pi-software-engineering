@@ -1,5 +1,5 @@
 ---
-name: challenge-plan
+name: se-challenge-plan
 description: Stress-test an implementation plan or proposed approach against project context, domain language, existing decisions, risks, sequencing, and test strategy. Use when the user wants to challenge a plan, sharpen an approach before implementation, or identify hidden assumptions before work starts.
 ---
 

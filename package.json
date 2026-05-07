@@ -59,8 +59,7 @@
       "./node_modules/pi-subagents/src/extension/index.ts"
     ],
     "skills": [
-      "./skills",
-      "./node_modules/pi-subagents/skills"
+      "./skills"
     ],
     "prompts": [
       "./node_modules/pi-subagents/prompts"
