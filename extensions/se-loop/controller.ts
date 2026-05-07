@@ -123,33 +123,39 @@ export async function runLoop(ctx: ExtensionCommandContext, initialState: WorkLo
   const planMarkdown = readFileSync(state.planPath, "utf8")
   const parsed = parsePlanMarkdown(planMarkdown)
 
+  // Pi invalidates `ctx` after `ctx.newSession(...)`. Reassign `activeCtx` from
+  // the replacement ctx passed to `withSession` so subsequent iterations and UI
+  // calls always use a live ctx.
+  let activeCtx: ExtensionCommandContext = ctx
+
   try {
     while (state.status === "active") {
       if (globalState.stopRequested || state.stopRequested) {
         state = appendLoopEvent({ ...state, status: "paused", stopRequested: false }, { type: "paused", message: "Stop requested; paused before next iteration." })
-        ctx.ui.notify(`SE work loop paused: ${state.id}`, "info")
+        activeCtx.ui.notify(`SE work loop paused: ${state.id}`, "info")
         break
       }
 
       const unit = nextUnitFromState(state, parsed.units)
       if (!unit) {
         state = appendLoopEvent({ ...state, status: "complete", currentUnitId: null }, { type: "complete", message: "All dependency-ready units completed." })
-        ctx.ui.notify(`SE work loop complete: ${state.id}`, "info")
+        activeCtx.ui.notify(`SE work loop complete: ${state.id}`, "info")
         break
       }
 
       state = updateUnitStatus({ ...state, currentUnitId: unit.id, iterationCount: state.iterationCount + 1 }, unit.id, "in_progress")
       state = appendLoopEvent(state, { type: "iteration_started", unitId: unit.id, message: `Starting ${unit.id}. ${unit.title}` })
-      ctx.ui.setStatus?.("se-work-loop", `SE loop ${state.id}: ${unit.id}`)
+      activeCtx.ui.setStatus?.("se-work-loop", `SE loop ${state.id}: ${unit.id}`)
 
       const iterationResult = new Promise<IterationResult>(resolve => {
         globalState.resolveIteration = resolve
       })
 
-      const parentSession = state.controllerSessionFile ?? ctx.sessionManager.getSessionFile?.()
-      const child = await ctx.newSession({
+      const parentSession = state.controllerSessionFile ?? activeCtx.sessionManager.getSessionFile?.()
+      const child = await activeCtx.newSession({
         ...(parentSession ? { parentSession } : {}),
         withSession: async replacementCtx => {
+          activeCtx = replacementCtx as ExtensionCommandContext
           const prompt = buildUnitPrompt({
             planPath: relative(replacementCtx.cwd, state.planPath),
             statePath: statePathFor(state),
@@ -163,7 +169,7 @@ export async function runLoop(ctx: ExtensionCommandContext, initialState: WorkLo
       if (child.cancelled) {
         globalState.resolveIteration = null
         state = appendLoopEvent({ ...state, status: "paused" }, { type: "cancelled", unitId: unit.id, message: "Child session creation was cancelled." })
-        ctx.ui.notify("SE work loop paused: child session creation was cancelled", "warning")
+        activeCtx.ui.notify("SE work loop paused: child session creation was cancelled", "warning")
         break
       }
 
@@ -172,18 +178,22 @@ export async function runLoop(ctx: ExtensionCommandContext, initialState: WorkLo
       if (!verified.ok) {
         state = updateUnitStatus({ ...state, status: "blocked" }, unit.id, "blocked", { summary: result.lastMessage, error: verified.summary })
         state = appendLoopEvent(state, { type: "verification_failed", unitId: unit.id, message: verified.summary })
-        ctx.ui.notify(`SE work loop blocked on ${unit.id}: ${verified.summary}`, "warning")
+        activeCtx.ui.notify(`SE work loop blocked on ${unit.id}: ${verified.summary}`, "warning")
         break
       }
 
       state = updateUnitStatus(state, unit.id, "completed", { summary: result.lastMessage })
       state = appendLoopEvent(state, { type: "unit_completed", unitId: unit.id, message: verified.summary })
-      ctx.ui.notify(`SE work loop completed ${unit.id}`, "info")
+      activeCtx.ui.notify(`SE work loop completed ${unit.id}`, "info")
     }
   } finally {
     if (globalState.runningLoopId === initialState.id) globalState.runningLoopId = null
     globalState.resolveIteration = null
-    ctx.ui.setStatus?.("se-work-loop", "")
+    try {
+      activeCtx.ui.setStatus?.("se-work-loop", "")
+    } catch {
+      // activeCtx may be stale if the loop ended right after newSession threw.
+    }
   }
 
   return state
