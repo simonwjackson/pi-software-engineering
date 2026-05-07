@@ -1,7 +1,7 @@
 ---
 title: feat: Add native SE work loop
 type: feat
-status: active
+status: completed
 date: 2026-05-06
 ---
 
