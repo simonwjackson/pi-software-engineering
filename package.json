@@ -1,0 +1,69 @@
+{
+  "name": "@simonwjackson/pi-software-engineering",
+  "version": "0.1.0",
+  "description": "Software Engineering workflows, skills, and reviewer agents for the Pi coding agent.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/simonwjackson/pi-software-engineering.git"
+  },
+  "keywords": [
+    "pi-package",
+    "software-engineering",
+    "skills",
+    "agents",
+    "code-review",
+    "planning"
+  ],
+  "files": [
+    "README.md",
+    "LICENSE",
+    "agents",
+    "extensions",
+    "skills"
+  ],
+  "dependencies": {
+    "pi-subagents": "latest"
+  },
+  "bundledDependencies": [
+    "pi-subagents"
+  ],
+  "peerDependencies": {
+    "@mariozechner/pi-agent-core": "*",
+    "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@mariozechner/pi-agent-core": {
+      "optional": true
+    },
+    "@mariozechner/pi-ai": {
+      "optional": true
+    },
+    "@mariozechner/pi-coding-agent": {
+      "optional": true
+    },
+    "@mariozechner/pi-tui": {
+      "optional": true
+    },
+    "@sinclair/typebox": {
+      "optional": true
+    }
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/software-engineering.ts",
+      "./node_modules/pi-subagents/src/extension/index.ts"
+    ],
+    "skills": [
+      "./skills",
+      "./node_modules/pi-subagents/skills"
+    ],
+    "prompts": [
+      "./node_modules/pi-subagents/prompts"
+    ]
+  }
+}
