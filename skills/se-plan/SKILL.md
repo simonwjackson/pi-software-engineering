@@ -493,6 +493,7 @@ status: active
 date: YYYY-MM-DD
 origin: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md  # include when planning from a requirements doc
 deepened: YYYY-MM-DD  # optional, set when the confidence check substantively strengthens the plan
+verify_command: "<command>"  # optional; required when the plan is intended for /se-work-loop. Concrete completion gate the loop runs after each implementation unit (e.g. "node --test", "mise run ci", "bin/rails test"). Authoring it here removes friction at loop-start time. Omit for plans not meant for the loop.
 ---
 
 # [Plan Title]

@@ -24,11 +24,35 @@ Use regular `se-work` for short or interactive work. Use `se-work-loop` when a p
 
 ## Verification Command
 
-Every loop needs a target-project verification command before durable state is created.
+Every loop needs a target-project verification command before durable state is created. The loop resolves it in this order, stopping at the first hit:
 
-- If the user provides `--verify-command`, use it.
-- Otherwise the extension attempts to discover one from project conventions such as `package.json` scripts, `mise.toml`, `AGENTS.md`, or `README.md`.
-- If discovery is unknown or ambiguous, the loop does **not** create a state file. Ask the user to re-run with `--verify-command`.
+1. `--verify-command "<command>"` flag on the slash command.
+2. `verify_command:` (or nested `loop.verify_command:`) in the plan's YAML frontmatter.
+3. `**Verification command:** <command>` inside an `## Execution Handoff` section in the plan body.
+4. Auto-discovery from `package.json` scripts, `mise.toml`, `AGENTS.md`, or `README.md`.
+5. If none match, the loop refuses to create durable state and prints the resolution order so the user can fix it once.
+
+The goal: plans authored for `/se-work-loop` should already carry their verify command so users do not have to type it.
+
+Example plan frontmatter:
+
+```yaml
+---
+title: feat: example
+status: active
+verify_command: "node --test tests/*.test.mjs"
+---
+```
+
+Or in the plan body:
+
+```md
+## Execution Handoff
+
+**Recommended loop command:** `/se-work-loop docs/plans/example.md`
+
+**Verification command:** `node --test tests/*.test.mjs`
+```
 
 Examples:
 
