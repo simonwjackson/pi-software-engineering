@@ -20,19 +20,26 @@ export function missingRequiredFiles(cwd: string, unit: LoopUnit): string[] {
   return unitFilePaths(unit).filter(filePath => !existsSync(resolve(cwd, filePath)))
 }
 
-export async function verifyUnit(cwd: string, unit: LoopUnit, verifyCommand: string): Promise<VerificationResult> {
+export function verifyUnitFiles(cwd: string, unit: LoopUnit): VerificationResult {
   const missingFiles = missingRequiredFiles(cwd, unit)
-  if (missingFiles.length > 0) {
+  if (missingFiles.length === 0) {
     return {
-      ok: false,
-      missingFiles,
-      command: verifyCommand,
-      summary: `Missing expected file(s): ${missingFiles.join(", ")}`,
+      ok: true,
+      missingFiles: [],
+      summary: `Files present for ${unit.id}`,
     }
   }
 
+  return {
+    ok: false,
+    missingFiles,
+    summary: `Missing expected file(s) after ${unit.id}: ${missingFiles.join(", ")}`,
+  }
+}
+
+export async function runVerifyCommand(cwd: string, command: string): Promise<VerificationResult> {
   try {
-    const { stdout, stderr } = await execAsync(verifyCommand, {
+    const { stdout, stderr } = await execAsync(command, {
       cwd,
       timeout: 10 * 60 * 1000,
       maxBuffer: 1024 * 1024,
@@ -40,20 +47,20 @@ export async function verifyUnit(cwd: string, unit: LoopUnit, verifyCommand: str
     return {
       ok: true,
       missingFiles: [],
-      command: verifyCommand,
+      command,
       stdout,
       stderr,
-      summary: `Verification passed: ${verifyCommand}`,
+      summary: `Verification passed: ${command}`,
     }
   } catch (error) {
     const err = error as Error & { stdout?: string; stderr?: string }
     return {
       ok: false,
       missingFiles: [],
-      command: verifyCommand,
+      command,
       stdout: err.stdout,
       stderr: err.stderr,
-      summary: `Verification failed: ${verifyCommand}\n${err.message}`,
+      summary: `Verification failed: ${command}\n${err.message}`,
     }
   }
 }

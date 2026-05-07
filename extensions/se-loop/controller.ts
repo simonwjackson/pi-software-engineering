@@ -3,7 +3,7 @@ import { relative, resolve } from "node:path"
 import type { AgentEndEvent, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
 import { nextRunnableUnit, parsePlanMarkdown, type LoopUnit } from "./plan-parser.ts"
 import { appendLoopEvent, completedUnitIds, createInitialState, resolveLoopState, saveLoopState, updateUnitStatus, type WorkLoopState } from "./state-store.ts"
-import { verifyUnit } from "./verification.ts"
+import { runVerifyCommand, verifyUnitFiles } from "./verification.ts"
 
 interface IterationResult {
   lastMessage: string
@@ -89,7 +89,7 @@ ${unit.testScenarios.length ? unit.testScenarios.map(scenario => `- ${scenario}`
 Verification for this unit:
 ${unit.verification.length ? unit.verification.map(item => `- ${item}`).join("\n") : "- Use the loop-level verify command."}
 
-Loop-level verify command, run by the controller after your turn:
+Loop-level verify command (the controller runs this once at the end of the loop, NOT after every unit):
 ${input.verifyCommand}
 
 When this unit is complete, end with a concise summary containing:
@@ -138,7 +138,13 @@ export async function runLoop(ctx: ExtensionCommandContext, initialState: WorkLo
 
       const unit = nextUnitFromState(state, parsed.units)
       if (!unit) {
-        state = appendLoopEvent({ ...state, status: "complete", currentUnitId: null }, { type: "complete", message: "All dependency-ready units completed." })
+        const completionResult = await runVerifyCommand(state.cwd, state.verifyCommand)
+        if (!completionResult.ok) {
+          state = appendLoopEvent({ ...state, status: "blocked", currentUnitId: null }, { type: "completion_gate_failed", message: completionResult.summary })
+          activeCtx.ui.notify(`SE work loop blocked at completion gate: ${completionResult.summary}`, "warning")
+          break
+        }
+        state = appendLoopEvent({ ...state, status: "complete", currentUnitId: null }, { type: "complete", message: completionResult.summary })
         activeCtx.ui.notify(`SE work loop complete: ${state.id}`, "info")
         break
       }
@@ -174,16 +180,16 @@ export async function runLoop(ctx: ExtensionCommandContext, initialState: WorkLo
       }
 
       const result = await iterationResult
-      const verified = await verifyUnit(state.cwd, unit, state.verifyCommand)
-      if (!verified.ok) {
-        state = updateUnitStatus({ ...state, status: "blocked" }, unit.id, "blocked", { summary: result.lastMessage, error: verified.summary })
-        state = appendLoopEvent(state, { type: "verification_failed", unitId: unit.id, message: verified.summary })
-        activeCtx.ui.notify(`SE work loop blocked on ${unit.id}: ${verified.summary}`, "warning")
+      const fileCheck = verifyUnitFiles(state.cwd, unit)
+      if (!fileCheck.ok) {
+        state = updateUnitStatus({ ...state, status: "blocked" }, unit.id, "blocked", { summary: result.lastMessage, error: fileCheck.summary })
+        state = appendLoopEvent(state, { type: "file_check_failed", unitId: unit.id, message: fileCheck.summary })
+        activeCtx.ui.notify(`SE work loop blocked on ${unit.id}: ${fileCheck.summary}`, "warning")
         break
       }
 
       state = updateUnitStatus(state, unit.id, "completed", { summary: result.lastMessage })
-      state = appendLoopEvent(state, { type: "unit_completed", unitId: unit.id, message: verified.summary })
+      state = appendLoopEvent(state, { type: "unit_completed", unitId: unit.id, message: fileCheck.summary })
       activeCtx.ui.notify(`SE work loop completed ${unit.id}`, "info")
     }
   } finally {
