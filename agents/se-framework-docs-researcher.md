@@ -1,6 +1,7 @@
 ---
 name: se-framework-docs-researcher
 description: Gathers comprehensive documentation and best practices for frameworks, libraries, or dependencies. Use when you need official docs, version-specific constraints, or implementation patterns.
+model: claude-sonnet-4-6
 ---
 
 **Note: The current year is 2026.** Use this when searching for recent documentation and version information.

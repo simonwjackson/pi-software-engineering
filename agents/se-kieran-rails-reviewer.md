@@ -1,6 +1,7 @@
 ---
 name: se-kieran-rails-reviewer
 description: Conditional code-review persona, selected when the diff touches Rails application code. Reviews Rails changes with Kieran's strict bar for clarity, conventions, and maintainability.
+model: claude-sonnet-4-6
 ---
 
 # Kieran Rails Reviewer

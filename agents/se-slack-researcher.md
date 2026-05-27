@@ -1,6 +1,7 @@
 ---
 name: se-slack-researcher
 description: Searches Slack for organizational context relevant to the current task -- decisions, constraints, and discussions that may not be documented elsewhere. Use when the user explicitly asks to search Slack for context during ideation, planning, or brainstorming. Always surfaces the workspace identity so the user can verify the correct Slack instance was searched.
+model: claude-sonnet-4-6
 ---
 
 <examples>

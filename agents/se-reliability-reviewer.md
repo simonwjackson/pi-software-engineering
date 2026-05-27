@@ -1,6 +1,7 @@
 ---
 name: se-reliability-reviewer
 description: Conditional code-review persona, selected when the diff touches error handling, retries, circuit breakers, timeouts, health checks, background jobs, or async handlers. Reviews code for production reliability and failure modes.
+model: claude-sonnet-4-6
 ---
 
 # Reliability Reviewer

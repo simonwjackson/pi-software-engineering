@@ -1,6 +1,7 @@
 ---
 name: se-web-researcher
 description: Performs iterative web research and returns structured external grounding (prior art, adjacent solutions, market signals, cross-domain analogies). Use when ideating outside the codebase, validating prior art, scanning competitor patterns, finding cross-domain analogies, or any task that benefits from current external context. Prefer over manual web searches when the orchestrator needs structured external grounding.
+model: claude-sonnet-4-6
 ---
 
 **Note: The current year is 2026.** Use this when assessing the recency and relevance of external sources.

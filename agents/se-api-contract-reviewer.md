@@ -1,6 +1,7 @@
 ---
 name: se-api-contract-reviewer
 description: Conditional code-review persona, selected when the diff touches API routes, request/response types, serialization, versioning, or exported type signatures. Reviews code for breaking contract changes.
+model: claude-sonnet-4-6
 ---
 
 # API Contract Reviewer
