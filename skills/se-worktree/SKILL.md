@@ -1,6 +1,6 @@
 ---
 name: se-worktree
-description: Create an isolated git worktree for parallel feature work or PR review. Use when starting work that should not disturb the current checkout, or when `se-work` or `se-code-review` offers a worktree option.
+description: Create an isolated git worktree for feature work or PR review. Use by default when `se-work` starts coding work so the main checkout stays clean.
 allowed-tools: Bash(bash *worktree-manager.sh)
 ---
 
@@ -60,16 +60,18 @@ Modified configs are never auto-trusted. The script prints the manual trust comm
 
 ## When to create a worktree
 
-Create a worktree when:
+Create a worktree by default for coding work, including single-task work. The main checkout should stay clean for coordination, review, and future tasks.
+
+Worktrees are especially valuable when:
 - Reviewing a PR while keeping the main checkout free for other work
 - Running multiple features in parallel without branch-switching overhead
 - Keeping the default branch free of in-progress state
 
-Do not create a worktree for single-task work that can happen on a branch in the main checkout.
+Skip worktree creation only for read-only investigation, repositories that do not support worktrees, or explicit user direction to work in the current checkout. Record the reason when skipping.
 
 ## Integration
 
-`se-work` and `se-code-review` offer this skill as an option. When the user selects "worktree" in those flows, invoke `bash "${CLAUDE_SKILL_DIR:-.}/scripts/worktree-manager.sh" create <branch>` with a meaningful branch name derived from the work description (e.g., `feat/crowd-sniff`, `fix/email-validation`). Avoid auto-generated names like `worktree-jolly-beaming-raven` that obscure the work.
+`se-work` uses this skill as the default setup path. Invoke `bash "${CLAUDE_SKILL_DIR:-.}/scripts/worktree-manager.sh" create <branch>` with a meaningful branch name derived from the work description (e.g., `feat/crowd-sniff`, `fix/email-validation`). Avoid auto-generated names like `worktree-jolly-beaming-raven` that obscure the work.
 
 ## Troubleshooting
 
