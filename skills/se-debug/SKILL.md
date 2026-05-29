@@ -15,9 +15,10 @@ Find root causes, then fix them. This skill investigates bugs systematically —
 These principles govern every phase. They are repeated at decision points because they matter most when the pressure to skip them is highest.
 
 1. **Investigate before fixing.** Do not propose a fix until you can explain the full causal chain from trigger to symptom with no gaps. "Somehow X leads to Y" is a gap.
-2. **Predictions for uncertain links.** When the causal chain has uncertain or non-obvious links, form a prediction — something in a different code path or scenario that must also be true. If the prediction is wrong but a fix "works," you found a symptom, not the cause. When the chain is obvious (missing import, clear null reference), the chain explanation itself is sufficient.
-3. **One change at a time.** Test one hypothesis, change one thing. If you're changing multiple things to "see if it helps," stop — that is shotgun debugging.
-4. **When stuck, diagnose why — don't just try harder.**
+2. **No edits before diagnosis.** Do not edit production code, tests, config, docs, or generated files before the Diagnosis Checkpoint in Phase 2. Investigation commands are allowed; mutating changes are not.
+3. **Predictions for uncertain links.** When the causal chain has uncertain or non-obvious links, form a prediction — something in a different code path or scenario that must also be true. If the prediction is wrong but a fix "works," you found a symptom, not the cause. When the chain is obvious (missing import, clear null reference), the chain explanation itself is sufficient.
+4. **One change at a time.** Test one hypothesis, change one thing. If you're changing multiple things to "see if it helps," stop — that is shotgun debugging.
+5. **When stuck, diagnose why — don't just try harder.**
 
 ## Execution Flow
 
@@ -25,8 +26,8 @@ These principles govern every phase. They are repeated at decision points becaus
 |-------|------|---------|
 | 0 | Triage | Parse input, fetch issue if referenced, proceed to investigation |
 | 1 | Investigate | Reproduce the bug, trace the code path |
-| 2 | Root Cause | Form hypotheses with predictions for uncertain links, test them, **causal chain gate**, smart escalation |
-| 3 | Fix | Only if user chose to fix. Test-first fix with workspace safety checks |
+| 2 | Root Cause | Form hypotheses with predictions for uncertain links, test them, **causal chain gate**, **Diagnosis Checkpoint**, smart escalation |
+| 3 | Fix | Only after the Diagnosis Checkpoint and only if user chose to fix. Test-first fix with workspace safety checks |
 | 4 | Handoff | Structured summary, then prompt the user for the next action |
 
 All phases self-size — a simple bug flows through them in seconds, a complex bug spends more time in each naturally. No complexity classification, no phase skipping.
@@ -118,13 +119,23 @@ Before forming a new hypothesis, review what has already been ruled out and why.
 
 *Reminder: if a prediction was wrong but the fix appears to work, you found a symptom. The real cause is still active.*
 
-#### Present findings
+#### Diagnosis Checkpoint — hard gate before fixing
 
-Once the root cause is confirmed, present:
-- The root cause (causal chain summary with file:line references)
-- The proposed fix and which files would change
-- Which tests to add or modify to prevent recurrence (specific test file, test case description, what the assertion should verify)
-- Whether existing tests should have caught this and why they did not
+Once the root cause is confirmed, present a `Debug Diagnosis` block before any code edit. This is a hard gate: Phase 3 may not begin until the diagnosis block has been shown to the user and the user has chosen to fix. The phrase "fix it" or "fix this bug" in the original request does not waive this checkpoint.
+
+Required format:
+
+```md
+## Debug Diagnosis
+**Symptom**: [Observed broken behavior]
+**Root Cause**: [Where valid state first becomes invalid, with file:line references]
+**Causal Chain**: [Trigger → intermediate steps → observed symptom, with no gaps]
+**Evidence**: [Reproduction, logs, code reads, tests, or predictions that confirmed the chain]
+**Proposed Fix**: [What will change and which files are expected to change]
+**Tests to Add/Update**: [Specific test file, test case description, and assertion]
+**Should Existing Tests Have Caught This?**: [Yes/no and why]
+**Confidence**: [High/Medium/Low]
+```
 
 Then offer next steps.
 
@@ -137,6 +148,8 @@ Options to offer:
 3. **Rethink the design** (`/se-brainstorm`) — only when the root cause reveals a design problem (see below)
 
 Do not assume the user wants action right now. The test recommendations are part of the diagnosis regardless of which path is chosen.
+
+**Premature-edit self-correction:** If you realize you started editing before presenting the `Debug Diagnosis`, stop immediately. Do not continue the fix. Revert the premature changes when safe, or clearly isolate and report them if reverting could lose user work. Then present the `Debug Diagnosis` and ask before continuing.
 
 **When to suggest brainstorm:** Only when investigation reveals the bug cannot be properly fixed within the current design — the design itself needs to change. Concrete signals observable during debugging:
 
@@ -167,6 +180,8 @@ Present the diagnosis to the user before proceeding.
 
 *Reminder: one change at a time. If you are changing multiple things, stop.*
 
+**Entry gate:** Before editing, confirm the `Debug Diagnosis` block was already shown and the user chose **Fix it now**. If not, return to Phase 2's Diagnosis Checkpoint. Do not treat the original bug report or a general "fix this" prompt as permission to skip the checkpoint.
+
 If the user chose "Diagnosis only" at the end of Phase 2, skip this phase and go straight to Phase 4 for the summary — the skill's job was the diagnosis. If they chose "Rethink the design", control has transferred to `/se-brainstorm` and this skill ends.
 
 **Workspace and branch check:** Before editing files:
@@ -186,7 +201,7 @@ If the user chose "Diagnosis only" at the end of Phase 2, skip this phase and go
 **Conditional defense-in-depth** (trigger: grep for the root-cause pattern found it in 3+ other files, OR the bug would have been catastrophic if it reached production): Read `references/defense-in-depth.md` for the four-layer model (entry validation, invariant check, environment guard, diagnostic breadcrumb) and choose which layers apply. Skip when the root cause is a one-off error with no realistic recurrence path.
 
 **Conditional post-mortem** (trigger: the bug was in production, OR the pattern appears in 3+ locations):
-Analyze how this was introduced and what allowed it to survive. Note any systemic gap or repeated pattern found — it informs Phase 4's decision on whether to offer learning capture.
+Analyze how this was introduced and what allowed it to survive. Note any systemic gap or repeated pattern found — it informs Phase 4's decision on whether to offer learning capture or backlog follow-up.
 
 ---
 
@@ -212,7 +227,7 @@ Analyze how this was introduced and what allowed it to survive. Note any systemi
 
 1. **Check for contextual overrides first.** Look at the user's original prompt, loaded memories, and the user/repo `AGENTS.md` or `CLAUDE.md` for preferences that conflict with auto commit-and-PR — for example, "always review before pushing", "open PRs as drafts", or "don't open PRs from skills". A signal must be an explicit instruction or a clearly applicable rule, not a vague tonal cue. If any apply, honor them — switch to the pre-existing-branch menu below, or skip the PR step entirely, whichever matches the user's stated preference.
 2. **Briefly preview what will happen** — what will be committed, on what branch, and that a PR will be opened — then proceed without waiting for confirmation. The preview exists so the user can interrupt; it is not a blocking question. Format and length are your call; keep it scannable.
-3. **Run `/se-commit-push-pr`.** When the entry came from an issue tracker, include the appropriate auto-close syntax for that tracker in the location it requires — most trackers parse PR descriptions (e.g., `Fixes #N` for GitHub, `Closes ABC-123` for Linear), but some only parse commit messages (e.g., Jira Smart Commits) — so the diagnosis and fix flow back to the issue and it closes on merge. Surface the resulting PR URL.
+3. **Run `/se-work` with ship/PR intent.** When the entry came from an issue tracker, include the appropriate auto-close syntax for that tracker in the location it requires — most trackers parse PR descriptions (e.g., `Fixes #N` for GitHub, `Closes ABC-123` for Linear), but some only parse commit messages (e.g., Jira Smart Commits) — so the diagnosis and fix flow back to the issue and it closes on merge. Surface the resulting PR URL.
 
 #### Pre-existing branch (skill did not create it): ask the user
 
@@ -220,11 +235,15 @@ Use the platform's blocking question tool (`AskUserQuestion` in Claude Code, `re
 
 Options:
 
-1. **Commit and open a PR (`/se-commit-push-pr`)** — default for most cases
-2. **Commit the fix (`/se-commit`)** — local commit only
+1. **Commit and open a PR (`/se-work` ship/PR intent)** — default for most cases
+2. **Commit the fix (`/se-work` commit-only intent)** — local commit only
 3. **Stop here** — user takes it from there
 
-#### After a PR is open (either path): consider offering learning capture
+#### After a PR is open (either path): consider follow-up capture
+
+If the investigation uncovered prevention, audit, or cleanup work that is real but outside the immediate fix, offer to capture it with `se-backlog`. Examples: auditing similar call sites, adding observability, hardening a boundary, or refactoring code that made the bug easy to introduce. Do not sneak that work into the bug-fix commit unless it is necessary for the fix.
+
+Then consider learning capture.
 
 Most bugs are localized mechanical fixes (typo, missed null check, missing import) where the only "lesson" is the bug itself. Compounding those clutters `docs/solutions/` without adding value. Decide which path applies:
 
