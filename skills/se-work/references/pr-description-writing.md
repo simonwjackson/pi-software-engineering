@@ -1,6 +1,6 @@
 # PR Description Writing
 
-How to resolve the right commit range and compose a PR title and body. Loaded on demand by `se-commit-push-pr` callers — do not load earlier.
+How to resolve the right commit range and compose a PR title and body. Loaded on demand by `se-work` commit/PR callers — do not load earlier.
 
 Step Pre-A resolves the commit range, diff, and (for existing PRs) the current PR body. Steps A through H assume Pre-A's outputs are in context.
 
@@ -12,7 +12,7 @@ Determine which commits and diff the description should cover. Run this first; S
 
 ### Mode
 
-- **Current-branch mode.** Describe HEAD vs the repo's default base. Used when the caller has no explicit PR reference (Step 6 of se-commit-push-pr's full workflow; description-only mode without a PR ref).
+- **Current-branch mode.** Describe HEAD vs the repo's default base. Used when the caller has no explicit PR reference (the Ship / PR workflow in `commit-pr-workflow.md`, or description-only mode without a PR ref).
 - **PR mode.** Describe a specific PR's commit range. Used by DU-3 (the existing PR on the current branch) and description-only mode (the user pasted a PR URL/number). The PR ref may be a bare number, `#NN`, `pr:NN`, or a full URL — the caller passes it to `gh pr view <ref>` directly. (`gh pr view` accepts numbers and URLs natively; `#NN` and `pr:NN` need the `#` or `pr:` stripped before passing.)
 
 ### Resolve PR metadata (PR mode and current-branch-with-existing-PR)
@@ -123,11 +123,23 @@ Do not label test output as "Demo" or "Screenshots". Place any preserved evidenc
 
 Articulate the PR's narrative frame:
 
-1. **Before**: What was broken, limited, or impossible? (One sentence.)
-2. **After**: What's now possible or improved? (One sentence.)
-3. **Scope rationale** (only if 2+ separable-looking concerns): Why do these ship together? (One sentence.)
+1. **Risk**: One line. `low` / `low–medium` / `medium` / `high`. What are the design judgments, unverified claims, or held scope items the reviewer should weigh? This is the absolute first line of the body for any non-trivial PR — it lets the reviewer make the trust-or-read-code decision before reading anything else.
+2. **Before**: What was broken, limited, or impossible? (One sentence.)
+3. **After**: What's now possible or improved? (One sentence.)
+4. **Scope rationale** (only if 2+ separable-looking concerns): Why do these ship together? (One sentence.)
 
-This frame becomes the opening. For small+simple PRs, the "after" sentence alone may be the entire description.
+This frame becomes the opening. For small+simple PRs, the "after" sentence (preceded by the Risk line) may be the entire description.
+
+### Risk line calibration
+
+The Risk line is an honest triage call. It commits the AI to a judgment the reviewer can disagree with.
+
+- **low** — no design judgments worth scrutinizing, no unverified claims, no held scope. Mechanical refactor, typo, dep bump, doc fix. Reviewer will skim and merge.
+- **low–medium** — 1–3 design choices with reasonable alternatives, OR one validation claim carried forward from a prior session, OR one deliberate scope hold for sequencing reasons. Reviewer can probably trust the AI but should scan the inline callouts.
+- **medium** — multiple design judgments, OR a contract change with downstream consumers, OR partial verification (some claims unrun). Reviewer should scan the body and probably spot-check one named file.
+- **high** — load-bearing architecture change, irreversible operation, security-touching change, OR significant unverified claims, OR scope expanded beyond the original brief. Reviewer should read the code; the body's job is to make that read efficient.
+
+Calibrate honestly. A `high` line that turns out to be `low` after review trains the reviewer to ignore the next high. A `low` that turns out to be `high` is the worse failure mode.
 
 ---
 
@@ -144,6 +156,21 @@ Assess size (files, diff volume) and complexity (design decisions, trade-offs, c
 | Performance improvement | Include before/after measurements if available. Markdown table works well. |
 
 When in doubt, shorter is better. Match description weight to change weight. Large PRs need MORE selectivity, not MORE content.
+
+### Shape selection (risk × size)
+
+After sizing, select a body shape. The shape determines whether the Decisions / Claims / Held-scope content appears as structured sections or woven into prose.
+
+| Risk        | Size                                  | Shape                                                                                                                                                                              |
+| ----------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| low         | small + simple                        | 1–2 sentences. Risk line + after-sentence may be the entire body.                                                                                                                  |
+| low         | small + non-trivial                   | Tightened narrative under 2–3 headings. No triage block.                                                                                                                            |
+| low–medium  | any                                   | **Default: tightened narrative.** Headings, separators, inline bolded callouts for decisions worth a glance. Decision timeline folded.                                              |
+| medium      | medium                                | Tightened narrative + structured triage block (`## Decisions worth a glance` / `## Claims worth checking` / `## Deliberately not done`). Decision timeline folded.                  |
+| medium–high | large or architecturally significant  | Structured triage block at top + narrative for the design story + visuals. Multiple folded reference sections (Decision timeline, layout/asserts, review fixes).                    |
+| high        | any                                   | Full structured top + narrative reasoning + visuals + all folded reference sections. The body's job is to make a code read efficient, not to substitute for one.                    |
+
+The **tightened narrative** is the default for most AI-implemented PRs because it makes the AI's reasoning visible *as reasoning* — the reviewer can disagree with a sentence, which is harder to do with a bullet. Switch to **structured-on-top** when there are more than ~4 calls worth flagging (prose doesn't carry that many cleanly) or when the reviewer's likely first action is "what should I scrutinize, listed."
 
 ---
 
@@ -214,6 +241,53 @@ Architecture changes are almost always topology (components + edges), so Mermaid
 
 Verify generated diagrams against the change before including.
 
+### Self-skeptical voice (AI-authored PRs)
+
+When the AI implemented the change, the description is a report to a supervisor, not a marketing artifact. Honesty about uncertainty is what makes the description useful as a triage instrument.
+
+- **Mark claim provenance.** If a verification claim was carried forward from a prior session rather than re-run, say so explicitly: `"X (run on YYYY-MM-DD) is referenced from a prior note, not re-run this session."` Do not promote unverified claims to the top of the body as live evidence.
+- **Name design choices as choices.** When the AI made a call with a reasonable alternative, name the alternative and the reason for the choice. `"Default is X; flip to Y if you'd prefer per-device opt-in."` This gives the reviewer a one-line escape hatch instead of forcing a code dive to disagree.
+- **Distinguish what was done from what was held.** Sequencing decisions belong in the body, not buried as TODOs in code.
+- **Avoid marketing phrasing for unverified work.** "Validated", "verified", "tested" carry provenance. Use them only when you ran the check in this session. For carried-forward signals use "carried forward", "byte-identical to the recipe that produced X", "reference checks unchanged."
+- **Defend chosen positions in writing, not by deferring to authority.** If a decision was made because a user asked, the body should still defend why the new position is correct — not just say "user asked." If the feedback was wrong and the AI pushed back successfully, that defense also belongs in the body.
+
+### File mentions are clickable
+
+Whenever the body names a real file path more than once, or the file is the load-bearing artifact for the change, link it. The link target depends on whether the file is *in this PR's diff* or *referenced but unchanged*.
+
+**Default: diff anchor.** For files modified, created, or deleted in this PR, link to the file's anchor in the Files Changed tab:
+
+```
+[`<path>`](https://github.com/<owner>/<repo>/pull/<N>/files#diff-<sha256-of-path>)
+```
+
+The anchor is the lowercase hex SHA-256 of the file path string (UTF-8, no newline). One line of shell to compute it:
+
+```bash
+printf '%s' '<path>' | sha256sum | awk '{print $1}'
+```
+
+Clicking the link drops the reviewer directly onto that file's diff in the PR view — the highest-value affordance for a triaging reviewer.
+
+**Fallback: blob URL.** For files *referenced but not modified* in this PR (e.g. "`X.nix` stays in the import path because pinned consumer still depends on it"), the diff anchor would 404. Link to the file as it exists on the PR's head branch instead:
+
+```
+[`<path>`](https://github.com/<owner>/<repo>/blob/<head-branch>/<path>)
+```
+
+Use the PR's `headRefName` (from `gh pr view --json headRefName`) as the branch segment. Branch names with slashes work — GitHub disambiguates against existing refs.
+
+**Mechanics:**
+
+- Determine which files are in the PR's diff once: `gh pr diff <N> --name-only` (or use the diff already gathered in Step Pre-A).
+- Use backticks inside the link text so the path renders as code.
+- Do not link file paths inside fenced code blocks (markdown won't render the link).
+- Link the prominent mentions, not every inline reference. Aim for: the "if you read one file" pointer, top-of-section "lives in X" / "declared in Y" callouts, scope-hold mentions, and consumer-side references when they name real files.
+
+### Headings and separators
+
+For any PR that uses the tightened-narrative or structured shape (low–medium risk or higher), use `##` headings per section and `---` thematic breaks between major sections. This adds scaffolding the reviewer can navigate, and breaks up dense prose without sacrificing voice. Trivial PRs (single-paragraph bodies) skip both.
+
 ### Numbering and references
 
 Never prefix list items with `#` in PR descriptions — GitHub interprets `#1`, `#2` as issue references and auto-links them.
@@ -241,13 +315,70 @@ Breaking changes use `!` (e.g., `feat!: ...`) or document in the body with a `BR
 
 ## Step G: Compose the body
 
-Assemble the body in this order:
+Assemble the body in this order. Skip any section that doesn't apply; include the rest in this sequence.
 
-1. **Opening** -- the narrative frame from Step C, at the depth chosen in Step D. Under a heading (e.g., `## Summary`) if the description uses any `##` headings elsewhere; a bare paragraph otherwise.
-2. **Body sections** -- only the sections that earn their keep for this change: what changed and why, design decisions, tables for data, visual aids when complexity warrants. Skip empty sections entirely.
-3. **Test plan** -- only when non-obvious per the writing principles. Omit otherwise.
-4. **Evidence block** -- only the preserved or freshly captured block from Step B, if one exists. Do not fabricate or placeholder.
-5. **Software Engineering badge** -- append a badge footer separated by a `---` rule. Skip if regenerating an existing body that already contains the badge.
+1. **Risk line.** First line of the body. Bold prefix, one sentence: `**Risk: <level>.** <what to weigh in one sentence>`. Required for low–medium and above. Optional for low + small.
+
+2. **Thematic break.** `---` after the Risk line for any PR with `##` sections.
+
+3. **`## Context`** (1–3 sentences). The before-state in plain English. Skip for trivial PRs.
+
+4. **`## What this changes`** (or similar). The after-state. Lead with what's now possible or fixed, not what was moved around.
+
+5. **Architecture / boundary diagram.** Mermaid, when the change has topology (components + edges). Inline at point of relevance, not a separate section. See the visual-communication subsection of Step E for the topology-vs-table choice.
+
+6. **`## The new option surface`** (or `## The new API`, `## The new schema`, etc.). The shape callers see. A code block showing the interface, immediately followed by a paragraph of inline bolded callouts on the decisions worth a glance:
+   - `**<option> defaults to <value>** — <reason>; <one-line flip suggestion>.`
+   - Bold the option name + chosen value, not the whole sentence.
+   - 2–4 callouts maximum. If there are more than 4, switch to a structured `## Decisions worth a glance` block of bullets above the code.
+
+7. **`## Mechanism`** (when the PR adds non-trivial logic — e.g. `## Bootstrap`, `## Migration`, `## Reconciler`). One paragraph naming the file it lives in (link the path) and the load-bearing properties (ordering, idempotency, failure mode, retries).
+
+8. **`## Consumer impact`** (when the PR changes a contract that has callers). A before/after code block showing what a caller's call site looks like. Mark "illustrative" if the after-side ships in a future PR.
+
+9. **`## Scope hold`** (when something was deliberately not done). One paragraph naming what was held, what depends on it being held, and where the cleanup ships.
+
+10. **`## Verification asterisk`** (or inline). Claims that were carried forward rather than re-run, partial verification, environment caveats. Self-skeptical voice rules from Step E apply.
+
+11. **If you read one file.** A bolded one-liner pointing to the single most important file to read, with a link. Place after the last visible section and before the folded details. Skip for trivial PRs or when no single file dominates.
+
+12. **`<details>` Decision timeline.** Folded. Numbered list of choice points, each with `chose / considered / why`. Include 5–10 entries for medium+ risk. Skip for trivial PRs.
+
+    ```markdown
+    <details>
+    <summary><strong>Decision timeline</strong></summary>
+
+    1. **<question>?**
+       - considered: <alternative>
+       - chose: <chosen>
+       - why: <one-line reason>
+    </details>
+    ```
+
+13. **`<details>` Review fixes** (only when a review-and-fix cycle happened in this session). Folded. Each entry names the source of the feedback, what changed, the commit, and why the new position is correct.
+
+    ```markdown
+    <details>
+    <summary><strong>Review fixes</strong></summary>
+
+    1. **<source>: "<concern>"**
+       - changed: <what>
+       - commit: <sha-or-link>
+       - why right: <one line> (or "applied without strong opinion")
+    </details>
+    ```
+
+    Sources to distinguish: user comment, automated review (CI/lint/contract check), self-review (AI noticed on re-read). "Why right" matters even when the AI flipped its position — the body defends the new position, not the act of accepting feedback.
+
+14. **`<details>` Scaffolding** (e.g. `Module layout, systemd ordering, contract assertions`). Folded reference material: file tree diffs, ordering diagrams, full assertion lists, configuration enumerations. Anything useful for spot-checking but not for triage.
+
+15. **Test plan.** Only when non-obvious per Step E. Omit when "run the tests" is the only useful guidance.
+
+16. **Evidence block.** From Step B, if present. Do not fabricate.
+
+17. **Software Engineering badge.** From below.
+
+The visible body (sections 1–11) answers "should I read the code?" The folded sections (12–14) answer "where did you get that?" and "what does the scaffolding look like?" once the reviewer has decided to dig in.
 
 **Badge:**
 
@@ -280,6 +411,12 @@ Before applying, re-read the composed body and apply these cuts:
 - If a "Review" or process-oriented section lists how to review, remove it. Move any truly non-obvious review hints inline with the relevant change.
 - If the body has 5+ H3 subsections that each describe one mechanism, consolidate them into a single table row per mechanism under one header. Reserve prose H3 callouts for 2-3 genuine design decisions.
 - If the body exceeds the sizing-table target by more than 30%, compress the longest non-Summary section by half.
+- If the Risk line is `low` but the body has structured triage sections (`## Decisions worth a glance` etc.), demote them to inline bolded callouts in the surface paragraph.
+- If the Risk line is `high` but the body lacks a Decision timeline or an "If you read one file" pointer, add them. High-risk PRs need both provenance and a focused-read target.
+- If file paths in visible prose are not linked, link the prominent ones — diff anchors (`/pull/N/files#diff-<sha256(path)>`) for files in the PR's diff, blob URLs on the head branch for files referenced but unchanged. Skip paths inside code fences.
+- If a Decision timeline entry's `why` is "user asked for it" without further reasoning, the AI is dodging — replace with the real defense of the chosen position, or remove the entry.
+- If the body uses any `##` headings but lacks `---` thematic breaks between major sections, add them. Visual scaffolding matters for triage.
+- If a verification claim uses "validated" or "verified" but was carried forward from a prior session rather than re-run, downgrade to "carried forward" or "reference checks unchanged" and surface the provenance.
 
 **Value-lead check.** Re-read the first sentence of the Summary. If it describes what was moved around, renamed, or added ("This PR introduces three-tier autofix..."), rewrite to lead with what's now possible or what was broken and is now fixed ("Document reviews previously produced 14+ findings requiring user judgment; this PR cuts that to 4-6.").
 

@@ -50,7 +50,7 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    Options (four or fewer, self-contained labels):
    - `Apply/fix now` — loop back into review with focused fixes; the agent investigates each finding, applies changes where safe, and re-runs review.
    - `File tickets via project tracker` — load `references/tracker-defer.md` in Interactive mode; the agent files tickets in the project's detected tracker (or `gh` fallback, or leaves them in the report if no sink exists) and proceeds to Final Validation.
-   - `Accept and proceed` — record the residual findings verbatim in a durable "Known Residuals" sink before shipping. If a PR will be created or updated in Phase 4, include them in the PR description's "Known Residuals" section (the agent owns this when calling `se-commit-push-pr`). If the user later chooses the no-PR `se-commit` path, create `docs/residual-review-findings/<branch-or-head-sha>.md`, include the accepted findings and source review-run context, stage it with the implementation commit, and mention the file path in the final summary. The user has acknowledged the risk, but the findings must not live only in the transient session.
+   - `Accept and proceed` — record the residual findings verbatim in a durable "Known Residuals" sink before shipping. If a PR will be created or updated in Phase 4, include them in the PR description's "Known Residuals" section (the agent owns this through `references/commit-pr-workflow.md`). If the user later chooses the local-only commit path, create `docs/residual-review-findings/<branch-or-head-sha>.md`, include the accepted findings and source review-run context, stage it with the relevant atomic commit, and mention the file path in the final summary. The user has acknowledged the risk, but the findings must not live only in the transient session.
    - `Stop — do not ship` — abort the shipping workflow. The user will handle findings manually before re-invoking.
 
    Skip this gate entirely when the review reported `Residual actionable work: none.` or when only Tier 1 was used. Do not proceed past this gate on an `Accept and proceed` decision until the agent has recorded whether the durable sink is `PR Known Residuals` or `docs/residual-review-findings/<branch-or-head-sha>.md`.
@@ -81,7 +81,7 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
 
    Do not invoke `se-demo-reel` directly in this step. Evidence capture belongs to the PR creation or PR description update flow, where the final PR diff and description context are available.
 
-   Note whether the completed work has observable behavior (UI rendering, CLI output, API/library behavior with a runnable example, generated artifacts, or workflow output). The `se-commit-push-pr` skill will ask whether to capture evidence only when evidence is possible.
+   Note whether the completed work has observable behavior (UI rendering, CLI output, API/library behavior with a runnable example, generated artifacts, or workflow output). The commit/PR workflow will ask whether to capture evidence only when evidence is possible.
 
 2. **Update Plan Status**
 
@@ -90,23 +90,110 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    status: active  ->  status: completed
    ```
 
-3. **Commit and Create Pull Request**
+3. **Commit, Push, and Create Pull Request**
 
-   Load the `se-commit-push-pr` skill to handle committing, pushing, and PR creation. The skill handles convention detection, branch safety, logical commit splitting, adaptive PR descriptions, and attribution badges.
+   Read `references/commit-pr-workflow.md` to handle any remaining atomic commits, pushing, and PR creation. Creating or updating a PR is the default shipping path for `/se-work`; only skip the PR when the user explicitly asks not to publish one. Do not use the local-only commit path unless the user explicitly requests it.
 
    When providing context for the PR description, include:
    - The plan's summary and key decisions
    - Testing notes (tests added/modified, manual testing performed)
-   - Evidence context from step 1, so `se-commit-push-pr` can decide whether to ask about capturing evidence
+   - Evidence context from step 1, so the commit/PR workflow can decide whether to ask about capturing evidence
    - Figma design link (if applicable)
    - The Post-Deploy Monitoring & Validation section (see Phase 3 Step 6)
    - Any "Known Residuals" accepted in the Phase 3 Residual Work Gate, rendered as a dedicated section in the PR body with severity, file:line, and title per finding
 
-   If the user prefers to commit without creating a PR, load the `se-commit` skill instead.
+   After creation/update, show the PR to the user by reporting the URL. If the harness can safely open a browser, also run:
 
-4. **Notify User**
+   ```bash
+   gh pr view --web
+   ```
+
+4. **Monitor Pull Request Gates**
+
+   After the PR exists, poll GitHub until the PR is ready to merge, blocked, or the session times out. Watch both review approval and GitHub Actions/status checks; approval alone is not enough.
+
+   Prefer the Pi PR supervisor extension when available:
+
+   ```text
+   tool: github_pr_supervise
+   inputs: { pr: <number-or-url>, mergeWhenReady: false }
+   ```
+
+   It gates on review approval, status-check rollup, and mergeability. If the PR supervisor tool is unavailable, use the GitHub CLI/API from the worktree:
+
+   ```bash
+   gh pr view --json url,number,reviewDecision,mergeStateStatus,statusCheckRollup,headRefName,baseRefName
+   gh pr checks --watch --interval 30
+   ```
+
+   If individual Actions runs fail and the harness provides `github_actions_supervise`, use it for the failed run IDs to summarize failed jobs/steps before returning to implementation.
+
+   Gate states:
+   - **Ready**: `reviewDecision` is `APPROVED`, required checks/actions are successful, and GitHub reports the PR mergeable or clean enough for the chosen merge strategy.
+   - **Needs changes**: a review requests changes, checks fail, or Actions fail. Fix in the same worktree, add atomic follow-up commits, push, and resume polling.
+   - **Waiting**: reviews or checks are still pending. Keep the PR URL visible and continue polling when the user asks, or stop with a clear pending status if the session should end.
+
+5. **Merge Approved Pull Request**
+
+   Default merge strategy is rebase through GitHub. Prefer the Pi PR supervisor extension when available:
+
+   ```text
+   tool: github_pr_supervise
+   inputs: { pr: <number-or-url>, mergeWhenReady: true, enableAutoMerge: true, cleanupWorktree: false }
+   ```
+
+   If the PR supervisor tool is unavailable, use GitHub CLI:
+
+   ```bash
+   gh pr merge --rebase --delete-branch
+   ```
+
+   Never use classic merge commits for `/se-work` shipping. Rebase merge preserves the atomic commit stack without adding a noisy merge commit and respects GitHub branch protection. If the repository has auto-merge enabled and checks/reviews are still pending, prefer:
+
+   ```bash
+   gh pr merge --auto --rebase --delete-branch
+   ```
+
+   Use a local fast-forward merge only when the user explicitly requests it and branch protection permits direct pushes:
+
+   ```bash
+   git fetch origin
+   git switch <base-branch>
+   git merge --ff-only <feature-branch>
+   git push origin <base-branch>
+   git push origin --delete <feature-branch>
+   ```
+
+   If rebase merge is unavailable because repository settings disallow it, stop and report the repository configuration issue instead of falling back to a classic merge commit.
+
+6. **Clean Up Worktree**
+
+   After the PR is merged, closed as unneeded, or the user explicitly says the work is done and no more local changes are needed, clean up the local worktree and feature branch. Do not remove a worktree that still contains uncommitted or unpushed changes.
+
+   Prefer the Pi PR supervisor extension when it is available and no further local commands need to run from the worktree:
+
+   ```text
+   tool: github_pr_supervise
+   inputs: { pr: <number-or-url>, cleanupWorktree: true }
+   ```
+
+   Otherwise, clean up from outside the worktree:
+
+   ```bash
+   git status --short
+   cd <main-checkout>
+   git worktree remove .worktrees/<branch-name>
+   git fetch --prune origin
+   git branch -d <branch-name>
+   ```
+
+   If cleanup fails, report the exact reason and the path that needs manual cleanup. Do not force-delete (`-D` or `--force`) unless the user explicitly confirms after seeing the unmerged/uncommitted state.
+
+7. **Notify User**
    - Summarize what was completed
-   - Link to PR (if one was created)
+   - Link to the PR
+   - State whether it was merged, auto-merge was enabled, or it is waiting on review/checks
+   - Confirm whether the remote branch and local worktree were cleaned up
    - Note any follow-up work needed
    - Suggest next steps if applicable
 
@@ -120,12 +207,15 @@ Before creating PR, verify:
 - [ ] Linting passes (use linting-agent)
 - [ ] Code follows existing patterns
 - [ ] Figma designs match implementation (if applicable)
-- [ ] Evidence decision handled by `se-commit-push-pr` when the change has observable behavior
+- [ ] Evidence decision handled by `references/commit-pr-workflow.md` when the change has observable behavior
 - [ ] Commit messages follow conventional format
 - [ ] PR description includes Post-Deploy Monitoring & Validation section (or explicit no-impact rationale)
 - [ ] Code review completed (Tier 1 harness-native or Tier 2 `se-code-review`)
 - [ ] PR description includes summary, testing notes, and evidence when captured
 - [ ] PR description includes Software Engineered badge with accurate model and harness
+- [ ] PR approval and GitHub Actions/status checks have been polled and reported
+- [ ] Merge strategy is rebase/auto-rebase, never classic merge
+- [ ] Local worktree cleanup is complete after merge/close, or explicitly deferred because the PR is still waiting
 
 ## Code Review Tiers
 

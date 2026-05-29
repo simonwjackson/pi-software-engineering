@@ -47,7 +47,7 @@ git checkout -b <branch-name> "$BASE_REF"
 - **Checkout fails because uncommitted changes would be overwritten:** local `<base>` diverges from `origin/<base>` in files the user has also edited. Stash, retry, pop:
 
   ```bash
-  git stash push -u -m "se-commit-push-pr: pre-branch <branch-name>"
+  git stash push -u -m "se-work: pre-branch <branch-name>"
   git checkout -b <branch-name> "$BASE_REF"
   git stash pop
   ```

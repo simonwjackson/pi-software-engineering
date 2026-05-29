@@ -159,7 +159,7 @@ After the selected tier produces an artifact, read `references/upload-and-approv
 
 ## Output
 
-Return these values to the caller (e.g., se-commit-push-pr):
+Return these values to the caller (usually `se-work`'s commit/PR workflow):
 
 ```
 === Evidence Capture Complete ===
