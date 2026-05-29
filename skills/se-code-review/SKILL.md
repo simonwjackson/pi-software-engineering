@@ -849,7 +849,7 @@ The fixer accepts two queue shapes depending on which caller invoked it:
   ```
   Capture `branch` and `head_sha` at dispatch time (before any autofixes land), and write the file after the verdict is finalized. This file is additive -- pre-existing artifacts that predate this field are still valid, and downstream skills fall back to file mtime when it is missing.
 - In autofix mode, the run artifact is the handoff. Orchestrators read the artifact's residual actionable work and route it as appropriate. The skill itself does not file tickets or prompt the user in autofix.
-- Interactive mode may offer to externalize residual actionable work via `references/tracker-defer.md` (named tracker -> GitHub Issues via `gh`), but it is not required to finish the review.
+- Interactive mode may offer to externalize residual actionable work via `references/tracker-defer.md` (named tracker -> GitHub Issues via `gh`). When the user wants a durable local sink instead of immediate fixes or external tickets, use `se-backlog` to capture the residual work. Externalizing residual work is not required to finish the review.
 
 #### Step 5: Final next steps
 

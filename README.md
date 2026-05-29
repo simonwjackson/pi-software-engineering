@@ -16,6 +16,7 @@ This package includes:
 - `pi-subagents` as a bundled dependency from https://github.com/nicobailon/pi-subagents
 - a small extension that exposes packaged SE agents to `pi-subagents` through managed symlinks in `~/.pi/agent/agents`
 - a native SE work-loop extension for running saved plans through fresh-context implementation-unit iterations
+- an ambient `se-backlog` skill for durable Backlog.md-style follow-up capture
 
 ## SE Work Loop
 
