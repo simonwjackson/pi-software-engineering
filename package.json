@@ -23,6 +23,10 @@
     "extensions",
     "skills"
   ],
+  "scripts": {
+    "test": "node --test tests/*.mjs",
+    "check": "npm test && npm pack --dry-run"
+  },
   "dependencies": {
     "pi-ask-user": "latest",
     "pi-subagents": "latest"
@@ -58,13 +62,13 @@
   "pi": {
     "extensions": [
       "./extensions/software-engineering.ts",
-      "./extensions/se-loop/index.ts",
       "./node_modules/pi-ask-user/index.ts",
       "./node_modules/pi-subagents/src/extension/index.ts"
     ],
     "skills": [
       "./skills",
-      "./node_modules/pi-ask-user/skills"
+      "./node_modules/pi-ask-user/skills",
+      "./node_modules/pi-subagents/skills"
     ],
     "prompts": [
       "./node_modules/pi-subagents/prompts"
