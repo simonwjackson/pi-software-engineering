@@ -53,13 +53,31 @@ import { setPhase, getPhase, addBacklog, readBacklogActive,
 is imported by `software-engineering.ts` and `se-review.ts` via relative
 path.
 
-## Backlog on-disk export
+## Backlog on-disk sync (the documented exception)
 
-`extensions/se-state-backlog-export.ts` renders the active backlog set to
-`backlog/<id> - <slug>.md`, preserving the existing on-disk format. Export
-is reached only by explicit user action through the `backlog_export` tool
-— never auto-triggered. `backlog/.next-id` is updated to the maximum id
-seen across the session log and the on-disk files.
+The backlog is the **one** SE entry type whose disk artifact is
+intentionally the cross-session source of truth.
+`extensions/se-state-backlog-export.ts` exposes single-file helpers
+(`writeBacklogItem`, `patchBacklogStatus`, `removeBacklogFile`,
+`readBacklogDir`) that the `backlog_add` / `backlog_promote` /
+`backlog_remove` tools call after they append the session-log entry. The
+result: items captured in one session are immediately visible to other
+sessions that read `backlog/`. `backlog_list` merges the current session
+log with `readBacklogDir(...)` so cross-session items appear without
+requiring an explicit export.
+
+This is **not a precedent** for moving other `se:*` state to disk. The
+rest of the catalogue (`se:phase`, `se:worktree`, `se:test-state`,
+`se:repro`, `se:review-finding`, `se:review-residual-resolved`) stays
+session-log-only on purpose — those are per-workstream and cheap to lose.
+The backlog is the exception because the user-facing value (durable
+follow-up work that survives across sessions and machines) is impossible
+to deliver without disk sync.
+
+The `backlog_export` tool remains available for bulk re-render / repair
+(e.g. after manually editing entries or pulling from another machine).
+`backlog/.next-id` is updated by every `backlog_add` that allocates a new
+id, in addition to the existing per-call update in `backlog_export`.
 
 ## Adding a new SE state type
 

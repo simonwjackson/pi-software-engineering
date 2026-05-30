@@ -1,9 +1,14 @@
 import { test } from "node:test"
 import { strict as assert } from "node:assert"
-import { readFileSync } from "node:fs"
-import { resolve } from "node:path"
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { resolve, join } from "node:path"
 
 const ROOT = resolve(import.meta.dirname, "..")
+
+function mkTmpRepo() {
+  return mkdtempSync(join(tmpdir(), "se-backlog-disk-"))
+}
 
 test("se-state.ts declares the canonical SE entry types", () => {
   const src = readFileSync(resolve(ROOT, "extensions/se-state.ts"), "utf8")
@@ -160,6 +165,172 @@ test("se-state read/write round-trip via an in-memory sessionManager mock", asyn
   // Floor honours .next-id values higher than seen ids.
   const item4 = mod.addBacklog(fakePi, fakeCtx, { title: "Fourth", status: "to-do" }, 100)
   assert.equal(item4.id, "task-100")
+})
+
+// ---------------------------------------------------------------------------
+// task-017: cross-session backlog visibility via auto-export on mutation.
+// ---------------------------------------------------------------------------
+
+test("writeBacklogItem renders frontmatter and bumps .next-id", async () => {
+  const mod = await import("../extensions/se-state-backlog-export.ts")
+  const cwd = mkTmpRepo()
+  try {
+    const item = {
+      id: "task-007",
+      title: "Park gnarly thing",
+      status: "to-do",
+      priority: "high",
+      labels: ["follow-up"],
+      createdAt: "2026-05-30T12:00:00.000Z",
+    }
+    const path = mod.writeBacklogItem(item, { cwd })
+    assert.ok(existsSync(path), "file should exist")
+    const md = readFileSync(path, "utf8")
+    assert.match(md, /^---\nid: task-007\n/)
+    assert.match(md, /status: To Do/)
+    const nextId = readFileSync(resolve(cwd, "backlog", ".next-id"), "utf8").trim()
+    assert.equal(nextId, "8")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("writeBacklogItem replaces an older slug for the same id", async () => {
+  const mod = await import("../extensions/se-state-backlog-export.ts")
+  const cwd = mkTmpRepo()
+  try {
+    const a = {
+      id: "task-001",
+      title: "Old title",
+      status: "to-do",
+      createdAt: "2026-05-30T12:00:00.000Z",
+    }
+    mod.writeBacklogItem(a, { cwd })
+    const b = { ...a, title: "New title" }
+    mod.writeBacklogItem(b, { cwd })
+    const dir = resolve(cwd, "backlog")
+    const files = readdirSync(dir).filter(n => n.endsWith(".md"))
+    assert.equal(files.length, 1, "only one .md file should remain for the id")
+    assert.match(files[0], /new-title/)
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("patchBacklogStatus updates only the frontmatter status line", async () => {
+  const mod = await import("../extensions/se-state-backlog-export.ts")
+  const cwd = mkTmpRepo()
+  try {
+    mod.writeBacklogItem(
+      {
+        id: "task-001",
+        title: "Promote me",
+        status: "to-do",
+        createdAt: "2026-05-30T12:00:00.000Z",
+      },
+      { cwd },
+    )
+    const patched = mod.patchBacklogStatus("task-001", "in-progress", { cwd })
+    assert.ok(patched, "should return the patched path")
+    const md = readFileSync(patched, "utf8")
+    assert.match(md, /status: In Progress/)
+    assert.doesNotMatch(md, /status: To Do/)
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("removeBacklogFile deletes the file for the given id", async () => {
+  const mod = await import("../extensions/se-state-backlog-export.ts")
+  const cwd = mkTmpRepo()
+  try {
+    const path = mod.writeBacklogItem(
+      {
+        id: "task-001",
+        title: "Doomed",
+        status: "to-do",
+        createdAt: "2026-05-30T12:00:00.000Z",
+      },
+      { cwd },
+    )
+    assert.ok(existsSync(path))
+    const removed = mod.removeBacklogFile("task-001", { cwd })
+    assert.equal(removed, path)
+    assert.equal(existsSync(path), false)
+    // Second remove returns undefined cleanly.
+    assert.equal(mod.removeBacklogFile("task-001", { cwd }), undefined)
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("readBacklogDir returns items written by a different session", async () => {
+  const mod = await import("../extensions/se-state-backlog-export.ts")
+  const cwd = mkTmpRepo()
+  try {
+    // Simulate "session A" writing two items.
+    mod.writeBacklogItem(
+      {
+        id: "task-001",
+        title: "First",
+        status: "to-do",
+        priority: "high",
+        labels: ["x"],
+        createdAt: "2026-05-30T12:00:00.000Z",
+      },
+      { cwd },
+    )
+    mod.writeBacklogItem(
+      {
+        id: "task-002",
+        title: "Second",
+        status: "in-progress",
+        priority: "low",
+        createdAt: "2026-05-30T12:01:00.000Z",
+      },
+      { cwd },
+    )
+    // "Session B" reads with a fresh empty in-memory session log.
+    const items = mod.readBacklogDir({ cwd })
+    assert.equal(items.length, 2)
+    assert.equal(items[0].id, "task-001")
+    assert.equal(items[0].status, "to-do")
+    assert.equal(items[0].priority, "high")
+    assert.deepEqual(items[0].labels, ["x"])
+    assert.equal(items[1].id, "task-002")
+    assert.equal(items[1].status, "in-progress")
+    assert.equal(items[1].priority, "low")
+  } finally {
+    rmSync(cwd, { recursive: true, force: true })
+  }
+})
+
+test("parseBacklogFrontmatter ignores non-backlog files and malformed input", async () => {
+  const mod = await import("../extensions/se-state-backlog-export.ts")
+  assert.equal(mod.parseBacklogFrontmatter(""), undefined)
+  assert.equal(mod.parseBacklogFrontmatter("# not a backlog file"), undefined)
+  assert.equal(
+    mod.parseBacklogFrontmatter("---\nid: task-001\n---\n"),
+    undefined,
+    "missing required fields rejected",
+  )
+})
+
+test("backlog_list documents that it reads disk too (task-017)", () => {
+  const src = readFileSync(resolve(ROOT, "extensions/software-engineering.ts"), "utf8")
+  assert.match(
+    src,
+    /Reads both the current session log and on-disk backlog\/ files/,
+    "backlog_list description does not advertise cross-session disk read",
+  )
+  assert.match(src, /readBacklogDir\(\{ cwd: ctx\.cwd \}\)/, "backlog_list does not call readBacklogDir")
+})
+
+test("backlog mutation tools wire to disk helpers (task-017)", () => {
+  const src = readFileSync(resolve(ROOT, "extensions/software-engineering.ts"), "utf8")
+  assert.match(src, /writeBacklogItem\(created, \{ cwd: ctx\.cwd \}\)/)
+  assert.match(src, /patchBacklogStatus\(p\.id, "in-progress", \{ cwd: ctx\.cwd \}\)/)
+  assert.match(src, /removeBacklogFile\(p\.id, \{ cwd: ctx\.cwd \}\)/)
 })
 
 test("readReviewResiduals excludes pre-existing and advisory by default", async () => {

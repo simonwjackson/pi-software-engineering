@@ -22,7 +22,14 @@ import {
   SE_ENTRY_TYPES,
   type BacklogItemPayload,
 } from "./se-state.ts"
-import { exportBacklog, readNextIdFloor } from "./se-state-backlog-export.ts"
+import {
+  exportBacklog,
+  patchBacklogStatus,
+  readBacklogDir,
+  readNextIdFloor,
+  removeBacklogFile,
+  writeBacklogItem,
+} from "./se-state-backlog-export.ts"
 import {
   classifyTestCommand,
   redactSecrets,
@@ -347,7 +354,7 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     name: "backlog_add",
     label: "Backlog: Add",
     description:
-      "Capture a deferred-but-actionable engineering follow-up into the SE backlog (session-log entry, optionally exported to backlog/<id>.md later). Use ambiently from other SE skills; do not interrupt the parent skill's flow to ask whether to capture.",
+      "Capture a deferred-but-actionable engineering follow-up into the SE backlog. Writes a session-log entry AND a backlog/<id> - <slug>.md file so the item is visible to other sessions immediately. Use ambiently from other SE skills; do not interrupt the parent skill's flow to ask whether to capture.",
     promptSnippet: "Capture a deferred follow-up into the SE backlog",
     promptGuidelines: [
       "Call backlog_add when the user says 'park this', 'add to the backlog', 'save for later', or when another SE skill discovers real but out-of-scope work.",
@@ -378,6 +385,14 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
       const created = ctx
         ? addBacklog(pi, ctx, partial, floor)
         : addBacklog(pi, { sessionManager: { getEntries: () => [] } } as never, partial, floor)
+      // task-017: also write to disk so other sessions see this item.
+      if (ctx?.cwd) {
+        try {
+          writeBacklogItem(created, { cwd: ctx.cwd })
+        } catch {
+          /* disk write is best-effort; session log remains authoritative */
+        }
+      }
       return {
         content: [
           {
@@ -395,7 +410,7 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     name: "backlog_list",
     label: "Backlog: List",
     description:
-      "List active SE backlog items. Reads the session log (does not touch the on-disk backlog/ directory). Optionally filter by status, label, or source.",
+      "List active SE backlog items. Reads both the current session log and on-disk backlog/ files (so items added in other sessions are visible). Optionally filter by status, label, or source.",
     promptSnippet: "List active SE backlog items",
     promptGuidelines: [
       "Call backlog_list when the user asks 'what's in the backlog', 'what did we defer', 'show parked work', or wants to pick up an item next.",
@@ -407,7 +422,18 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
         return { content: [{ type: "text", text: "No session context" }], isError: true }
       }
       const p = params as typeof BacklogListSchema.static
-      let items = readBacklogActive(ctx)
+      // task-017: merge session log (current-session truth) with on-disk
+      // files (cross-session truth). Per-id, session log wins because it
+      // holds the freshest in-flight status changes for this session.
+      const sessionItems = readBacklogActive(ctx)
+      const sessionIds = new Set(sessionItems.map(i => i.id))
+      const diskItems = readBacklogDir({ cwd: ctx.cwd })
+      const merged: BacklogItemPayload[] = [...sessionItems]
+      for (const d of diskItems) {
+        if (!sessionIds.has(d.id)) merged.push(d)
+      }
+      merged.sort((a, b) => a.id.localeCompare(b.id))
+      let items = merged
       if (p.status) items = items.filter(i => i.status === p.status)
       if (p.label) items = items.filter(i => (i.labels ?? []).includes(p.label!))
       if (p.source) items = items.filter(i => i.source === p.source)
@@ -433,9 +459,17 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
       "Choose target by item shape: small and clear → 'se-work'; multi-step or architectural → 'se-plan'; bug → 'se-debug'.",
     ],
     parameters: BacklogPromoteSchema,
-    async execute(_toolCallId, params) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const p = params as typeof BacklogPromoteSchema.static
       promoteBacklog(pi, p.id, p.target, p.note)
+      // task-017: keep disk in sync so other sessions see the promotion.
+      if (ctx?.cwd) {
+        try {
+          patchBacklogStatus(p.id, "in-progress", { cwd: ctx.cwd })
+        } catch {
+          /* best-effort */
+        }
+      }
       return {
         content: [
           {
@@ -460,9 +494,17 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
       "Provide a meaningful reason: 'landed in #142', 'superseded by task-019', 'no longer relevant'. The reason is persisted to the session log.",
     ],
     parameters: BacklogRemoveSchema,
-    async execute(_toolCallId, params) {
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const p = params as typeof BacklogRemoveSchema.static
       removeBacklog(pi, p.id, p.reason)
+      // task-017: drop the disk file too so it disappears from other sessions.
+      if (ctx?.cwd) {
+        try {
+          removeBacklogFile(p.id, { cwd: ctx.cwd })
+        } catch {
+          /* best-effort */
+        }
+      }
       return {
         content: [{ type: "text", text: `Removed ${p.id} — ${p.reason}` }],
         details: { id: p.id, reason: p.reason },

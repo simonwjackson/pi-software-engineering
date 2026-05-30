@@ -30,21 +30,22 @@ Ask only when the item value, destination, duplicate handling, promotion target,
 
 ## Storage
 
-Backlog items live in the **Pi session log** by default, captured through registered SE tools rather than scratch markdown files. The on-disk `backlog/` directory is an **export target**, written by `backlog_export` on explicit user intent.
+Backlog state lives in two places that are kept in sync automatically:
 
-**Primary storage: session-log tools** (registered by `extensions/software-engineering.ts`).
+1. **Pi session log** — per-session runtime substrate. Survives `/compact`, `/fork`, restart, and worktree changes.
+2. **`backlog/<id> - <slug>.md` files on disk** — cross-session source of truth. Every `backlog_add` / `backlog_promote` / `backlog_remove` writes/patches/deletes the matching file immediately. Items captured in one session are visible to another session reading the same repo without needing an explicit export.
 
 | Tool | Purpose |
 |---|---|
-| `backlog_add` | Capture a new item. Returns the assigned id. Allocates monotonically, never reuses removed ids. |
-| `backlog_list` | Read active items (optionally filtered by status / label / source). |
-| `backlog_promote` | Mark an item promoted to `se-work`, `se-plan`, `se-debug`, or `other`. Does not remove the item; status flips to `in-progress` on subsequent reads. |
-| `backlog_remove` | Append a removal entry. The id is never reissued. Use after work lands or the user explicitly drops the item. |
-| `backlog_export` | Render the active items to `backlog/<id> - <slug>.md`. Skips existing files unless `overwrite=true`. Updates `backlog/.next-id` from the maximum id seen on-disk or in the log. |
+| `backlog_add` | Capture a new item. Appends a session-log entry AND writes `backlog/<id> - <slug>.md`. Allocates monotonically, never reuses removed ids. |
+| `backlog_list` | List active items. Reads both the current session log and on-disk `backlog/` files; merges by id (session log wins for in-flight changes). |
+| `backlog_promote` | Mark an item promoted to `se-work`, `se-plan`, `se-debug`, or `other`. Appends a promotion entry AND patches the disk file's `status:` line to `In Progress`. |
+| `backlog_remove` | Append a removal entry AND delete the disk file. The id is never reissued. Use after work lands or the user explicitly drops the item. |
+| `backlog_export` | Bulk re-render the active items to `backlog/<id> - <slug>.md`. Use after manually editing entries, after pulling from another machine, or to repair drift. Skips existing files unless `overwrite=true`. Updates `backlog/.next-id`. |
 
-Backlog state survives `/compact`, `/fork`, session restart, and worktree changes — the session log is the source of truth. No `.context/software-engineering/` scratch dir.
+**Why disk sync.** The backlog is the one SE entry type whose value is durable, cross-session follow-up work. Without disk sync, items captured in session A are invisible to session B — which defeats the point. The per-mutation file write is the documented cost paid to deliver cross-session visibility. All other `se:*` state (phase, worktree, test-state, residuals, repro) stays session-log-only; the backlog is the exception, not the precedent.
 
-**Why explicit export, not auto-sync.** Auto-export-on-mutation would reintroduce the Git churn this design eliminates. The on-disk format is preserved for sharing across machines, code-review of intake, and Git-based audit; treat it as a snapshot you commit when you mean to.
+**Working-tree churn.** Each park/promote/prune touches `backlog/*.md` and shows up as a working-tree change. This is intentional. If you want to suppress noise during an active slice, defer commits of `backlog/` until you reach a natural checkpoint.
 
 **Detection order for the export target:**
 
@@ -52,9 +53,9 @@ Backlog state survives `/compact`, `/fork`, session restart, and worktree change
 2. Otherwise, default to `backlog/` at the repository root.
 3. Do not export under `docs/` (durable knowledge) or `.context/software-engineering/` (local scratch).
 
-**ID allocation.** `backlog_add` reads the highest id across active and removed entries in the session log AND `backlog/.next-id` (when the file exists). The greater value plus one becomes the new id. `backlog/.next-id` is updated on every `backlog_export` to the latest maximum. **Never decrement, never reuse a retired ID** — references in commits, PRs, and plans must keep pointing at exactly one thing. Filenames stay repo-portable: lowercase slug, no absolute paths.
+**ID allocation.** `backlog_add` reads the highest id across active and removed entries in the session log AND `backlog/.next-id` (when the file exists). The greater value plus one becomes the new id. `backlog/.next-id` is bumped on every `backlog_add` and `backlog_export`. **Never decrement, never reuse a retired ID** — references in commits, PRs, and plans must keep pointing at exactly one thing. Filenames stay repo-portable: lowercase slug, no absolute paths.
 
-**Migration from an existing on-disk backlog.** If the repo already has `backlog/task-NNN - *.md` files (e.g. the upgrade-plan backlog committed in this repository), they remain a valid Git-tracked artifact and are not touched by the new tools. New captures go to the session log; running `backlog_export` later writes them alongside the existing files.
+**Migration from an existing on-disk backlog.** If the repo already has `backlog/task-NNN - *.md` files, they remain a valid Git-tracked artifact and are honored as cross-session state immediately — they show up in `backlog_list` for any session reading the repo.
 
 ## Item Format
 
