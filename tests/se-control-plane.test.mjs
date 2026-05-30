@@ -33,8 +33,9 @@ test("registers the three documented CLI flags with correct types", () => {
   assert.match(SRC, /pi\.registerFlag\("se-no-pr",\s*\{[\s\S]{0,500}type:\s*"boolean"/)
 })
 
-test("registers ctrl+w / ctrl+r / ctrl+g shortcuts with graceful fallback", () => {
-  for (const key of ["ctrl+g", "ctrl+r", "ctrl+w"]) {
+test("registers alt+s / alt+r / alt+w shortcuts with graceful fallback", () => {
+  // alt+* prefix chosen to avoid Pi built-in collisions (ctrl+g/r/w are taken).
+  for (const key of ["alt+s", "alt+r", "alt+w"]) {
     assert.match(SRC, new RegExp(`pi\\.registerShortcut\\("${key.replace("+", "\\+")}"`))
   }
   // Each shortcut handler degrades to a notify when there is nothing to act on.

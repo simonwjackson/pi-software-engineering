@@ -874,7 +874,10 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
 
   // -- keyboard shortcuts ---------------------------------------------------
   // Graceful fallback: handlers degrade to a notify when no state to act on.
-  pi.registerShortcut("ctrl+g", {
+  // Shortcuts use alt+* to avoid colliding with Pi built-ins:
+  // ctrl+g is reserved, ctrl+r = app.session.rename, ctrl+w =
+  // tui.editor.deleteWordBackward. alt+s/r/w are unused at v0.77.
+  pi.registerShortcut("alt+s", {
     description: "SE: jump to next review residual",
     handler: ctx => {
       const residuals = readReviewResiduals(ctx)
@@ -889,7 +892,7 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     },
   })
 
-  pi.registerShortcut("ctrl+r", {
+  pi.registerShortcut("alt+r", {
     description: "SE: show last review summary",
     handler: ctx => {
       const residuals = readReviewResiduals(ctx)
@@ -907,7 +910,7 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     },
   })
 
-  pi.registerShortcut("ctrl+w", {
+  pi.registerShortcut("alt+w", {
     description: "SE: show current worktree binding",
     handler: ctx => {
       const snap = snapshotSEState(ctx) as SnapshotShape

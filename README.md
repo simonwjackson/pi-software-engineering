@@ -116,9 +116,11 @@ erroring.
 
 | Key | Action |
 |---|---|
-| `ctrl+g` | Show next review residual (`/se-residuals` triage UI is planned) |
-| `ctrl+r` | Summarise the last review run by severity counts |
-| `ctrl+w` | Show current worktree binding |
+| `alt+s` | Show next review residual (`/se-residuals` triage UI is planned) |
+| `alt+r` | Summarise the last review run by severity counts |
+| `alt+w` | Show current worktree binding |
+
+The `alt+*` prefix is used to avoid collisions with Pi built-in shortcuts (`ctrl+g`, `ctrl+r`, `ctrl+w` are reserved for session and editor controls).
 
 All three degrade gracefully — if there's nothing to act on (no review,
 no worktree, no residuals), the shortcut notifies the user instead of
