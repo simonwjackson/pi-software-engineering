@@ -80,21 +80,6 @@ resources from the working directory on every `session_start` and `/reload`:
 Missing directories are skipped silently. Add any subset to a repo and they
 are loaded without touching `settings.json`.
 
-### Guided `/se-plan`
-
-`/se-plan` walks the user through a short planning-brief interview
-(topic, problem, desired outcome, scope in/out, constraints, open
-questions, entry slice). Each answer is persisted to the session log
-under `se:plan-draft` so the draft survives `/compact`, `/fork`, and
-restart — resume with `/se-plan --resume`.
-
-On completion, the command offers to hand the rendered brief back to
-`/skill:se-plan` for the deep Implementation Units breakdown. The
-command captures the brief; the skill prose still owns the deepening.
-
-In non-interactive modes (print/JSON), the command notifies and
-recommends `/skill:se-plan` directly.
-
 ### Subagent fan-out commands
 
 | Command | Dispatches | Default agents |

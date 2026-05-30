@@ -14,7 +14,6 @@ test("se-state.ts declares the canonical SE entry types", () => {
     "se:review-finding",
     "se:review-residual-resolved",
     "se:repro",
-    "se:plan-draft",
     "se:backlog",
     "se:backlog:promoted",
     "se:backlog:removed",

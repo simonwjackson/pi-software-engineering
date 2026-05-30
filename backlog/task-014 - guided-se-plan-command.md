@@ -1,7 +1,7 @@
 ---
 id: task-014
 title: Replace `se-plan` prose runbook with a guided `/se-plan` command
-status: To Do
+status: Dropped
 priority: medium
 labels:
   - pi-native
@@ -20,6 +20,10 @@ context:
 ---
 
 # Replace `se-plan` prose runbook with a guided `/se-plan` command
+
+## Dropped
+
+Dropped on 2026-05-30 at user request. The native `/se-plan` command conflicted with the desired surface: planning should remain the `se-plan` skill (`/skill:se-plan`) rather than a separate non-skill command. The implementation was removed from `extensions/se-plan/`, `extensions/software-engineering.ts`, README/docs, and tests; `skills/se-plan/SKILL.md` remains intact.
 
 ## Context
 

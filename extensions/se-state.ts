@@ -31,7 +31,6 @@ export const SE_ENTRY_TYPES = {
   REVIEW_FINDING: "se:review-finding", // shared with extensions/se-review.ts
   REVIEW_RESIDUAL_RESOLVED: "se:review-residual-resolved",
   REPRO: "se:repro",
-  PLAN_DRAFT: "se:plan-draft",
   BACKLOG: "se:backlog",
   BACKLOG_PROMOTED: "se:backlog:promoted",
   BACKLOG_REMOVED: "se:backlog:removed",

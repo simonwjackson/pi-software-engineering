@@ -22,7 +22,6 @@ individual skills.
 | `se:worktree` | `se-worktree` / `se-work` (future) | guardrails, status |
 | `se:test-state` | bash wrapper (task-015) | atomic-commit guardrail (task-012), status |
 | `se:repro` | `se-debug` (task-013) | edit guardrail |
-| `se:plan-draft` | `/se-plan` command (task-014) | plan resume |
 | `se:backlog` | `backlog_add` tool | `backlog_list`, `backlog_export`, before_agent_start |
 | `se:backlog:promoted` | `backlog_promote` tool | `backlog_list` |
 | `se:backlog:removed` | `backlog_remove` tool | `backlog_list` (filter) |
