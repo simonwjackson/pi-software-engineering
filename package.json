@@ -62,6 +62,7 @@
   "pi": {
     "extensions": [
       "./extensions/software-engineering.ts",
+      "./extensions/se-review.ts",
       "./node_modules/pi-ask-user/index.ts",
       "./node_modules/pi-subagents/src/extension/index.ts"
     ],

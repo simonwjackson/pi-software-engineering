@@ -321,6 +321,8 @@ Brief summary at the top: "Applied N fixes. K items need attention (X errors, Y 
 
 Include the Coverage table, applied fixes, FYI observations (as a distinct subsection), residual concerns, and deferred questions.
 
+**Pi-native structured emission (interactive mode only):** if the `se_review_finding` tool is registered, also call it once per surfaced finding after rendering the template. Pass `kind: "doc"`, the synthesized `severity`, `title`, `section`, `finding_type`, `why_it_matters`, `autofix_class` (one of `safe_auto` / `gated_auto` / `manual` — doc-review must not use `advisory`), `confidence`, `evidence`, optional `suggested_fix`, and `source: "se-doc-review:<persona>"`. The harness renders a colored card and persists the finding to the session log so `/se-residuals` and downstream SE skills can read it back without re-parsing the table. Emit one tool call per finding; do not bundle multiple findings into one call. Skip already-applied `safe_auto` fixes (those are in the Applied fixes section, not the actionable bucket). Do not run this emission in headless mode — the structured text envelope is already the machine contract there.
+
 **All tables MUST be pipe-delimited markdown (`| col | col |`). Do NOT use ASCII box-drawing characters (`┌ ┬ ┐ ├ ┼ ┤ └ ┴ ┘ │ ─`) under any circumstances, including for the Coverage table.** This rule restates the template's formatting requirement at the point of rendering so it cannot drift. Pipe-delimited tables render correctly across all target harnesses; box-drawing characters break rendering in some and violate the repo convention documented in root `AGENTS.md`.
 
 ### R29 Rejected-Finding Suppression (Round 2+)
