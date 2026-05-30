@@ -17,6 +17,8 @@ These principles govern every phase. They are repeated at decision points becaus
 
 1. **Investigate before fixing.** Do not propose a fix until you can explain the full causal chain from trigger to symptom with no gaps. "Somehow X leads to Y" is a gap.
 2. **No edits before diagnosis.** Do not edit production code, tests, config, docs, or generated files before the Diagnosis Checkpoint in Phase 2. Investigation commands are allowed; mutating changes are not.
+
+   **Harness-enforced gate (when `--se-debug-strict` is set).** The `software-engineering` extension refuses `edit`, `write`, and `multi_edit` calls on non-doc paths until you call the `se_capture_repro` tool (or run the `/se-debug-repro` prompt). Recording symptom / steps / observed / expected unblocks subsequent edits. Documentation paths (`docs/`, `*.md`, `README*`, `CHANGELOG*`) bypass the gate. Pass `--se-debug-strict=false` to disable the gate for the session if you genuinely need to make non-debug edits while se-debug is active.
 3. **Predictions for uncertain links.** When the causal chain has uncertain or non-obvious links, form a prediction — something in a different code path or scenario that must also be true. If the prediction is wrong but a fix "works," you found a symptom, not the cause. When the chain is obvious (missing import, clear null reference), the chain explanation itself is sufficient.
 4. **One change at a time.** Test one hypothesis, change one thing. If you're changing multiple things to "see if it helps," stop — that is shotgun debugging.
 5. **When stuck, diagnose why — don't just try harder.**

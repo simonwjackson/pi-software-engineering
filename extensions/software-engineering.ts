@@ -8,13 +8,17 @@ import { Type } from "typebox"
 
 import {
   addBacklog,
+  appendSE,
   promoteBacklog,
+  readAllSE,
   readBacklogActive,
+  readLatestSE,
   readReviewResiduals,
   removeBacklog,
   reviewFindingKey,
   setTestState,
   snapshotSEState,
+  SE_ENTRY_TYPES,
   type BacklogItemPayload,
 } from "./se-state.ts"
 import { exportBacklog, readNextIdFloor } from "./se-state-backlog-export.ts"
@@ -532,6 +536,113 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     description: "After /se-work completes, do not open a PR — commit and stop. Mirrors 'no PRs, just commit' intent.",
     type: "boolean",
     default: false,
+  })
+  pi.registerFlag("se-debug-strict", {
+    description:
+      "Enable the no-edits-before-repro guardrail: refuse edit/write/multi_edit on code paths until a se:repro entry is recorded. Use with /skill:se-debug.",
+    type: "boolean",
+    default: false,
+  })
+
+  // -- se_capture_repro tool ------------------------------------------------
+  pi.registerTool({
+    name: "se_capture_repro",
+    label: "SE: Capture repro",
+    description:
+      "Record a reproduction for the current bug before editing any code. The harness uses the recorded repro to unblock the no-edits-before-repro guardrail. Use this whenever you've reproduced a defect and are about to start fixing it.",
+    promptSnippet: "Record symptom, steps, observed, expected for the active debug session",
+    promptGuidelines: [
+      "Call se_capture_repro after reproducing a bug and BEFORE making any code change. The no-edits-before-repro guardrail blocks edits until this tool has been called once in the session.",
+      "Provide concrete observed and expected values (not just 'fails' / 'works'). Include the minimal steps that reliably reproduce the defect.",
+      "Use environment to record runtime details (Node version, OS, branch) when the bug is environment-sensitive.",
+    ],
+    parameters: Type.Object({
+      symptom: Type.String({
+        description: "One-sentence description of the user-visible defect.",
+        minLength: 1,
+      }),
+      reproduction_steps: Type.String({
+        description: "Numbered or plain-text steps that reliably reproduce the defect.",
+        minLength: 1,
+      }),
+      observed: Type.String({
+        description: "What actually happens when the steps run.",
+        minLength: 1,
+      }),
+      expected: Type.String({
+        description: "What should happen when the steps run.",
+        minLength: 1,
+      }),
+      environment: Type.Optional(
+        Type.String({
+          description: "Runtime details (Node version, OS, branch) when environment-sensitive.",
+        }),
+      ),
+      references: Type.Optional(
+        Type.Array(Type.String(), {
+          description: "Repo-relative paths or issue references. Never absolute paths.",
+        }),
+      ),
+    }),
+    async execute(_toolCallId, params) {
+      const p = params as {
+        symptom: string
+        reproduction_steps: string
+        observed: string
+        expected: string
+        environment?: string
+        references?: string[]
+      }
+      appendSE(pi, SE_ENTRY_TYPES.REPRO, {
+        ...p,
+        recordedAt: new Date().toISOString(),
+      })
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Repro recorded: ${p.symptom}\n  observed: ${p.observed}\n  expected: ${p.expected}\n\nEdits are now unblocked for this session.`,
+          },
+        ],
+      }
+    },
+  })
+
+  // -- no-edits-before-repro gate ------------------------------------------
+  // Active when --se-debug-strict is set. Defers to a doc-path bypass and
+  // checks for any se:repro entry in the current session log.
+  const GUARDED_TOOLS = new Set(["edit", "write", "multi_edit"])
+  const DOC_PATH_PATTERNS: RegExp[] = [
+    /^docs\//,
+    /\.md$/i,
+    /\.markdown$/i,
+    /\.mdx$/i,
+    /\.rst$/i,
+    /\.txt$/i,
+    /(^|\/)README\b/i,
+    /(^|\/)CHANGELOG\b/i,
+  ]
+
+  function isDocPath(path: string): boolean {
+    for (const pat of DOC_PATH_PATTERNS) if (pat.test(path)) return true
+    return false
+  }
+
+  pi.on("tool_call", async (event, ctx) => {
+    if (!GUARDED_TOOLS.has(event.toolName)) return
+    if (pi.getFlag("se-debug-strict") !== true) return
+    const target = (event.input as { file_path?: string; path?: string }).file_path
+      ?? (event.input as { file_path?: string; path?: string }).path
+      ?? ""
+    if (target && isDocPath(target)) return
+    if (!ctx) return
+    const repros = readAllSE<unknown>(ctx, SE_ENTRY_TYPES.REPRO)
+    if (repros.length > 0) return
+    return {
+      block: true,
+      reason:
+        "se-debug: capture a repro before editing code. Run the /se-debug-repro prompt or call the `se_capture_repro` tool, then retry. Pass --se-debug-strict=false to disable the gate for this session.",
+    }
   })
 
   // -- resources_discover: per-repo SE skills/prompts/themes ----------------

@@ -38,6 +38,45 @@ The package is intentionally broad. Add future Software Engineering workflows, r
 
 Package agents are canonical in `agents/`. Package skills are canonical in `skills/`.
 
+### Per-repo SE resources
+
+The `software-engineering` extension auto-discovers project-specific SE
+resources from the working directory on every `session_start` and `/reload`:
+
+| Layout | Resource kind |
+|---|---|
+| `.software-engineering/skills/` | skills |
+| `docs/playbooks/` | skills |
+| `agents/` | skills |
+| `.software-engineering/prompts/` | prompt templates |
+| `.software-engineering/themes/` | themes |
+
+Missing directories are skipped silently. Add any subset to a repo and they
+are loaded without touching `settings.json`.
+
+### Keyboard shortcuts
+
+| Key | Action |
+|---|---|
+| `ctrl+g` | Show next review residual (`/se-residuals` triage UI is planned) |
+| `ctrl+r` | Summarise the last review run by severity counts |
+| `ctrl+w` | Show current worktree binding |
+
+All three degrade gracefully — if there's nothing to act on (no review,
+no worktree, no residuals), the shortcut notifies the user instead of
+erroring.
+
+### CLI flags
+
+| Flag | Effect |
+|---|---|
+| `--se-review-tier=<1\|2>` | Force SE review tier; overrides `/se-work`'s prose-based selection |
+| `--se-skip-worktree` | Skip worktree isolation in `/se-work`. Use only for read-only investigations |
+| `--se-no-pr` | After `/se-work` completes, commit and stop (no PR) |
+
+Flag values are readable via `pi.getFlag(name)` inside the extension and
+through downstream skill prose.
+
 ### Test-runner observation
 
 The `software-engineering` extension observes every `bash` tool result and
