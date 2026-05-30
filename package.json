@@ -21,6 +21,7 @@
     "LICENSE",
     "agents",
     "extensions",
+    "prompts",
     "skills"
   ],
   "scripts": {
@@ -72,6 +73,7 @@
       "./node_modules/pi-subagents/skills"
     ],
     "prompts": [
+      "./prompts",
       "./node_modules/pi-subagents/prompts"
     ]
   }
