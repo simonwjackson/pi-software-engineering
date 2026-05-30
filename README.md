@@ -19,6 +19,7 @@ This package includes:
 - session-log-backed SE state (`se:phase`, `se:worktree`, `se:test-state`, `se:review-finding`, `se:backlog`, ...) so runtime state survives `/compact`, `/fork`, and worktree changes
 - backlog tools (`backlog_add`, `backlog_list`, `backlog_promote`, `backlog_remove`, `backlog_export`) backed by the session log; `backlog/` is an explicit export target, not the primary store
 - an `se_read_residuals` tool that reads the unresolved review-finding set for downstream skills (`se-work` shipping workflow, `se-resolve-pr-feedback`)
+- automatic test-runner observation: bash invocations that match the runner table (`npm test`, `pytest`, `cargo test`, `bun test`, `mise run test*`, `bin/rails test`, `go test`, `rspec`, `jest`, `vitest`, `node --test`, ...) populate `se:test-state` so downstream guardrails can refuse RED-state commits
 
 Decision records for retired surfaces live under `decisions/`. The SE state
 substrate and entry-type catalogue are documented in `docs/SE-STATE.md`.
@@ -36,6 +37,36 @@ Three skills are `/skill:name`-only and intentionally hidden from auto-invocatio
 The package is intentionally broad. Add future Software Engineering workflows, review personas, research agents, and automation here rather than scattering `se-*` resources directly under `~/.pi/agent`.
 
 Package agents are canonical in `agents/`. Package skills are canonical in `skills/`.
+
+### Test-runner observation
+
+The `software-engineering` extension observes every `bash` tool result and
+writes a `se:test-state` entry whenever the command matches a test-runner
+prefix. Default runner table:
+
+| Runner | Prefixes |
+|---|---|
+| npm | `npm test`, `npm run test*` |
+| pnpm / yarn | `pnpm test`, `pnpm run test*`, `yarn test`, `yarn run test*` |
+| bun | `bun test`, `bun run test*` |
+| pytest | `pytest`, `python -m pytest`, `python3 -m pytest` |
+| mise | `mise run test*`, `mise run ci` |
+| cargo / go | `cargo test`, `go test` |
+| Ruby | `rspec`, `bundle exec rspec`, `bin/rails test`, `rails test`, `bundle exec rails test` |
+| jest / vitest | `jest`, `npx jest`, `vitest`, `npx vitest` |
+| node | `node --test` |
+
+Matching is prefix-based with delimiter tolerance: `npm run test:integration`,
+`cargo test --release`, and `CI=1 time -p npm test` all classify correctly.
+
+Commands are recorded verbatim except for obvious secret tokens: `KEY=value`,
+`SECRET=value`, `TOKEN=value`, `BEARER=value`, `--password value`,
+`--token value`, and 32+-char base64-looking values are replaced with
+`<redacted>`.
+
+Observation only. Refusal lives in the `tool_call` guardrails (see backlog
+tasks 012 and 013). The producer is independently shippable so the
+guardrails always have signal when they land.
 
 ### Skill frontmatter conventions
 

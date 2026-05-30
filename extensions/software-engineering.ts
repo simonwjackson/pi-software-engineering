@@ -3,6 +3,7 @@ import { homedir } from "node:os"
 import { basename, dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
+import { isBashToolResult } from "@earendil-works/pi-coding-agent"
 import { Type } from "typebox"
 
 import {
@@ -12,10 +13,16 @@ import {
   readReviewResiduals,
   removeBacklog,
   reviewFindingKey,
+  setTestState,
   snapshotSEState,
   type BacklogItemPayload,
 } from "./se-state.ts"
 import { exportBacklog, readNextIdFloor } from "./se-state-backlog-export.ts"
+import {
+  classifyTestCommand,
+  redactSecrets,
+  type TestRunnerMatch,
+} from "./se-test-detect.ts"
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const PACKAGE_AGENTS_DIR = resolve(PACKAGE_ROOT, "agents")
@@ -394,6 +401,41 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
         },
       }
     },
+  })
+
+  // -- bash test-state observer --------------------------------------------
+  // Records se:test-state entries whenever an LLM-driven bash call (or
+  // user_bash) matches the test-runner table. Observation only — refusal
+  // lives in tool_call guardrails (task-012, task-013).
+  const bashStartTimes = new Map<string, number>()
+
+  pi.on("tool_call", async event => {
+    if (event.toolName !== "bash") return
+    bashStartTimes.set(event.toolCallId, Date.now())
+  })
+
+  pi.on("tool_result", async event => {
+    if (!isBashToolResult(event)) return
+    const startedAt = bashStartTimes.get(event.toolCallId)
+    bashStartTimes.delete(event.toolCallId)
+    const command = (event.input as { command?: string }).command ?? ""
+    if (!command) return
+    const match: TestRunnerMatch | undefined = classifyTestCommand(command)
+    if (!match) return
+    const exitCode = event.isError ? 1 : 0
+    const durationMs = startedAt ? Date.now() - startedAt : undefined
+    setTestState(pi, redactSecrets(command), exitCode, durationMs)
+  })
+
+  pi.on("user_bash", async event => {
+    // For direct user `!command`, observe but never modify execution.
+    // Pi runs the command via its default path; we just sniff the prefix.
+    const match = classifyTestCommand(event.command)
+    if (!match) return
+    // We have no exit code at this point (no result event for user_bash).
+    // Record an entry indicating a user-driven test run *was attempted*.
+    // Consumers should not treat this as a definitive RED/GREEN signal.
+    setTestState(pi, redactSecrets(event.command), -1, undefined)
   })
 
   // -- session_start: agent symlinks + SE state replay ----------------------
