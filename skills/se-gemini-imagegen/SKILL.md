@@ -7,6 +7,18 @@ argument-hint: "<prompt-or-source-paths>"
 
 # Gemini Image Generation (Nano Banana Pro)
 
+**Pi tools (preferred when registered):** three of the five python scripts ship as typed Pi tools. Use the tool surface; the scripts stay on disk as fallback.
+
+| Tool | Wraps | Use when |
+|---|---|---|
+| `gemini_image_generate` | `scripts/generate_image.py` | Creating a new image from a text prompt |
+| `gemini_image_edit` | `scripts/edit_image.py` | Modifying an existing image with a natural-language instruction |
+| `gemini_image_compose` | `scripts/compose_images.py` | Combining 1–14 input images into a new image |
+
+`scripts/multi_turn_chat.py` and `scripts/gemini_images.py` remain script-only — they're interactive REPL flows that don't fit a single tool-call shape.
+
+**Pre-flight:** Always confirm `GEMINI_API_KEY` is set before calling any of the three tools. The scripts fail fast without it; surfacing the missing-env check before invoking avoids wasted call attempts.
+
 Generate and edit images using Google's Gemini API. The environment variable `GEMINI_API_KEY` must be set.
 
 ## Default Model

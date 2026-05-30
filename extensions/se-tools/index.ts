@@ -17,6 +17,7 @@ import { registerSessionTools } from "./se-sessions.ts"
 import { registerPulseTool } from "./se-pulse.ts"
 import { registerPrTools } from "./se-pr.ts"
 import { registerDemoReelTool } from "./se-demo-reel.ts"
+import { registerGeminiImageTools } from "./se-gemini-imagegen.ts"
 
 export function registerSeTools(pi: ExtensionAPI, packageRoot: string): void {
   registerCleanGoneTool(pi, packageRoot)
@@ -24,4 +25,5 @@ export function registerSeTools(pi: ExtensionAPI, packageRoot: string): void {
   registerPulseTool(pi, packageRoot)
   registerPrTools(pi, packageRoot)
   registerDemoReelTool(pi, packageRoot)
+  registerGeminiImageTools(pi, packageRoot)
 }
