@@ -78,6 +78,25 @@ resources from the working directory on every `session_start` and `/reload`:
 Missing directories are skipped silently. Add any subset to a repo and they
 are loaded without touching `settings.json`.
 
+### Subagent fan-out commands
+
+| Command | Dispatches | Default agents |
+|---|---|---|
+| `/se-review [persona-filter]` | `se-code-review` Tier 2 | coherence, correctness, security, testing, maintainability, reliability, performance, scope-guardian |
+| `/se-doc-review [persona-filter]` | `se-doc-review` | adversarial-document, coherence, scope-guardian, feasibility |
+| `/se-research <topic>` | research fan-out | best-practices, framework-docs, web, repo-research |
+
+Each command parses an optional comma-separated persona filter (default:
+full set), builds a structured `pi.sendUserMessage` prompt that names the
+persona set explicitly, and hands control to the existing skill prose for
+dispatch and synthesis via `pi-subagents`. Default persona sets are
+centralised in `extensions/se-subagent/personas.ts` so updating the
+default is one edit.
+
+When `pi-subagents` is filtered out via settings, the commands notify the
+user and recommend invoking the underlying skill directly instead of
+erroring.
+
 ### Keyboard shortcuts
 
 | Key | Action |
