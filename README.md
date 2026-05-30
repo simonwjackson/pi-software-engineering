@@ -16,9 +16,12 @@ This package includes:
 - `pi-subagents` as a bundled dependency from https://github.com/nicobailon/pi-subagents
 - a small extension that exposes packaged SE agents to `pi-subagents` through managed symlinks in `~/.pi/agent/agents`
 - an `se-review` extension that registers the `se_review_finding` tool for structured review-finding emission
-- an ambient `se-backlog` skill for durable Backlog.md-style follow-up capture
+- session-log-backed SE state (`se:phase`, `se:worktree`, `se:test-state`, `se:review-finding`, `se:backlog`, ...) so runtime state survives `/compact`, `/fork`, and worktree changes
+- backlog tools (`backlog_add`, `backlog_list`, `backlog_promote`, `backlog_remove`, `backlog_export`) backed by the session log; `backlog/` is an explicit export target, not the primary store
+- an `se_read_residuals` tool that reads the unresolved review-finding set for downstream skills (`se-work` shipping workflow, `se-resolve-pr-feedback`)
 
-Decision records for retired surfaces live under `decisions/`.
+Decision records for retired surfaces live under `decisions/`. The SE state
+substrate and entry-type catalogue are documented in `docs/SE-STATE.md`.
 
 ## Power-user skills
 

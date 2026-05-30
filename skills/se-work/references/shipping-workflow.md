@@ -43,6 +43,8 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
 
    After Tier 2 code review completes, inspect the Residual Actionable Work summary it returned (or read the run artifact directly if the summary was not emitted). If one or more residual `downstream-resolver` findings remain, do not proceed to Final Validation until the user decides how to handle them.
 
+   **Pi-native residuals read.** When the `se_read_residuals` tool is registered (provided by `extensions/software-engineering.ts` once `extensions/se-review.ts` has emitted `se_review_finding` calls into the session log), call it with no arguments to get the structured, deduplicated residual set instead of re-parsing the review report. The tool excludes pre-existing and advisory findings by default; pass `includePreExisting: true` or `includeAdvisory: true` to widen. Persisting residuals through the session log means they survive `/compact` and `/fork`, and downstream skills like `se-resolve-pr-feedback` read the same set without re-running review.
+
    Ask the user using the platform's blocking question tool (`AskUserQuestion` in Claude Code with `ToolSearch select:AskUserQuestion` pre-loaded if needed, `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension)). Fall back to numbered options in chat only when the harness genuinely lacks a blocking tool. Never silently skip the gate.
 
    Stem: `Code review found N residual finding(s) the skill did not auto-fix. How should the agent proceed?`

@@ -30,26 +30,31 @@ Ask only when the item value, destination, duplicate handling, promotion target,
 
 ## Storage
 
-Use a Backlog.md-style repo-local markdown backlog.
+Backlog items live in the **Pi session log** by default, captured through registered SE tools rather than scratch markdown files. The on-disk `backlog/` directory is an **export target**, written by `backlog_export` on explicit user intent.
 
-Detection order:
+**Primary storage: session-log tools** (registered by `extensions/software-engineering.ts`).
 
-1. If the repo already has Backlog.md configuration (`backlog.config.yml`, `backlog/config.yml`, `.backlog/config.yml`) or an existing backlog directory (`backlog/`, `.backlog/`), follow the existing location and file conventions.
-2. Otherwise, create `backlog/` at the repository root.
-3. Do not put backlog items under `docs/`. Documentation is durable knowledge; backlog is operational work intake.
-4. Do not put durable backlog items under `.context/software-engineering/`. That location is local scratch/resume state and may be ignored by git.
+| Tool | Purpose |
+|---|---|
+| `backlog_add` | Capture a new item. Returns the assigned id. Allocates monotonically, never reuses removed ids. |
+| `backlog_list` | Read active items (optionally filtered by status / label / source). |
+| `backlog_promote` | Mark an item promoted to `se-work`, `se-plan`, `se-debug`, or `other`. Does not remove the item; status flips to `in-progress` on subsequent reads. |
+| `backlog_remove` | Append a removal entry. The id is never reissued. Use after work lands or the user explicitly drops the item. |
+| `backlog_export` | Render the active items to `backlog/<id> - <slug>.md`. Skips existing files unless `overwrite=true`. Updates `backlog/.next-id` from the maximum id seen on-disk or in the log. |
 
-If an installed Backlog.md CLI or MCP is clearly configured for the repo, you may use it internally to preserve metadata. Do not expose the interaction as a command-style workflow to the user. If the CLI is unavailable, write markdown files directly.
+Backlog state survives `/compact`, `/fork`, session restart, and worktree changes — the session log is the source of truth. No `.context/software-engineering/` scratch dir.
 
-Default direct-write layout when no stronger convention exists:
+**Why explicit export, not auto-sync.** Auto-export-on-mutation would reintroduce the Git churn this design eliminates. The on-disk format is preserved for sharing across machines, code-review of intake, and Git-based audit; treat it as a snapshot you commit when you mean to.
 
-```text
-backlog/
-  task-001 - short-title.md
-  task-002 - another-follow-up.md
-```
+**Detection order for the export target:**
 
-Allocate the next numeric ID from `backlog/.next-id` (a single integer, committed to the repo). Create it seeded to `1` when missing, or to one above the highest existing `task-*` file when migrating an existing backlog. Increment it on every capture. **Never decrement, never reuse a retired ID** — references in commits, PRs, and plans must keep pointing at exactly one thing. Keep filenames repo-portable: lowercase slug, no absolute paths.
+1. If the repo already has a `backlog/` or `.backlog/` directory or `backlog.config.yml`, export into the existing layout.
+2. Otherwise, default to `backlog/` at the repository root.
+3. Do not export under `docs/` (durable knowledge) or `.context/software-engineering/` (local scratch).
+
+**ID allocation.** `backlog_add` reads the highest id across active and removed entries in the session log AND `backlog/.next-id` (when the file exists). The greater value plus one becomes the new id. `backlog/.next-id` is updated on every `backlog_export` to the latest maximum. **Never decrement, never reuse a retired ID** — references in commits, PRs, and plans must keep pointing at exactly one thing. Filenames stay repo-portable: lowercase slug, no absolute paths.
+
+**Migration from an existing on-disk backlog.** If the repo already has `backlog/task-NNN - *.md` files (e.g. the upgrade-plan backlog committed in this repository), they remain a valid Git-tracked artifact and are not touched by the new tools. New captures go to the session log; running `backlog_export` later writes them alongside the existing files.
 
 ## Item Format
 
@@ -302,7 +307,7 @@ Pi does not export the current session ID. The session jsonl path is determinist
 
 ## Ecosystem Integration
 
-Other SE skills should use this skill ambiently.
+Other SE skills should use this skill ambiently, calling `backlog_add` directly when out-of-scope work surfaces.
 
 **When invoked by another SE skill, capture autonomously by default.** Do not interrupt the parent skill's flow to ask whether to capture. Only ask the user when the item's value, destination, or duplicate handling is genuinely ambiguous — never to confirm that capture itself should happen. Report the result as a single line so the parent skill can continue.
 
