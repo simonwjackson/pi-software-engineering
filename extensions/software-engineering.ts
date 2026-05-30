@@ -562,6 +562,18 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     },
   })
 
+  // -- before_agent_start: inject SE state into systemPrompt --------------
+  // The status block is appended to the chained systemPrompt so the model
+  // treats it as durable context for the turn. Empty state emits nothing
+  // (no per-turn 'no SE state' noise).
+  pi.on("before_agent_start", async (_event, ctx) => {
+    const snap = snapshotSEState(ctx) as SnapshotShape
+    if (isEmptySnapshot(snap)) return
+    const block = renderInjectedSEContextBlock(snap)
+    if (!block) return
+    return { systemPrompt: block }
+  })
+
   // -- bash test-state observer --------------------------------------------
   // Records se:test-state entries whenever an LLM-driven bash call (or
   // user_bash) matches the test-runner table. Observation only — refusal
@@ -637,6 +649,36 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     ])
     if (mutatingTools.has(event.toolName)) refreshSEWidget(ctx)
   })
+}
+
+/**
+ * Compose the per-turn SE context block injected via before_agent_start.
+ * Bounded in size: counts for residuals/backlog, top item summary only.
+ */
+function renderInjectedSEContextBlock(s: SnapshotShape): string {
+  const lines: string[] = ["<se-state>"]
+  if (s.phase) {
+    lines.push(`phase: ${s.phase.phase}${s.phase.sliceId ? " (" + s.phase.sliceId + ")" : ""}`)
+  }
+  if (s.worktree) {
+    lines.push(`worktree: ${s.worktree.branch}`)
+  }
+  if (s.testState) {
+    const when = shortTime(s.testState.recordedAt)
+    lines.push(`last_test: ${s.testState.color} (exit ${s.testState.exitCode}) at ${when}`)
+  }
+  if (s.reviewResiduals.length > 0) {
+    lines.push(
+      `review_residuals: ${s.reviewResiduals.length} open — call se_read_residuals for the full list, or /se-status for a summary`,
+    )
+  }
+  if (s.backlogActive.length > 0) {
+    lines.push(
+      `backlog: ${s.backlogActive.length} active — call backlog_list for the full set`,
+    )
+  }
+  lines.push("</se-state>")
+  return lines.length > 2 ? lines.join("\n") : ""
 }
 
 function refreshSEWidget(ctx: { hasUI: boolean; ui: { setStatus?: (k: string, v: string) => void; setWidget?: (k: string, lines: string[]) => void } } & Parameters<typeof snapshotSEState>[0]): void {
