@@ -30,6 +30,7 @@ import {
 } from "./se-test-detect.ts"
 import { registerSeTools } from "./se-tools/index.ts"
 import { registerSeSubagentCommands } from "./se-subagent/index.ts"
+import { registerSePlanCommand } from "./se-plan/index.ts"
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const PACKAGE_AGENTS_DIR = resolve(PACKAGE_ROOT, "agents")
@@ -341,6 +342,9 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
 
   // -- subagent fan-out commands (task-008) --------------------------------
   registerSeSubagentCommands(pi)
+
+  // -- guided /se-plan command (task-014) ----------------------------------
+  registerSePlanCommand(pi)
 
   // -- backlog_add ----------------------------------------------------------
   pi.registerTool({
