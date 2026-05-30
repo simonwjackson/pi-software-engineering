@@ -192,6 +192,42 @@ Observation only. Refusal lives in the `tool_call` guardrails (see backlog
 tasks 012 and 013). The producer is independently shippable so the
 guardrails always have signal when they land.
 
+### Tool wrappers for scripty skills
+
+Scripty SE skills — those whose mechanical work lives in `skills/<name>/scripts/` — should expose their work as a registered Pi tool. The script stays on disk as a fallback when Pi is not the harness or the tool is filtered via settings; the tool surface gives the LLM a typed menu so it picks the action by name instead of templating bash.
+
+Lifted today:
+
+| Tool | Wraps | Skill |
+|---|---|---|
+| `se_clean_gone` | `clean-gone` | `se-clean-gone-branches` |
+| `se_session_list` | `discover-sessions.sh` | `se-session-inventory` |
+| `se_session_skeleton` | `extract-skeleton.py` | `se-session-extract` |
+| `se_session_errors` | `extract-errors.py` | `se-session-extract` |
+| `pulse_report` | _(no script; save step)_ | `se-product-pulse` |
+| `pr_comments_list` | `get-pr-comments` | `se-resolve-pr-feedback` |
+| `pr_thread_get` | `get-thread-for-comment` | `se-resolve-pr-feedback` |
+| `pr_thread_reply` | `reply-to-pr-thread` | `se-resolve-pr-feedback` |
+| `pr_thread_resolve` | `resolve-pr-thread` | `se-resolve-pr-feedback` |
+| `capture_demo` | `capture-demo.py` (9 subcommands) | `se-demo-reel` |
+| `gemini_image_generate` | `generate_image.py` | `se-gemini-imagegen` |
+| `gemini_image_edit` | `edit_image.py` | `se-gemini-imagegen` |
+| `gemini_image_compose` | `compose_images.py` | `se-gemini-imagegen` |
+
+Deliberately skipped (see `decisions/2026-05-30-skip-test-browser-and-test-xcode-tool-wrappers.md`):
+
+- `test_browser` — `se-test-browser` has no SE-owned script; the skill invokes `agent-browser` CLI directly.
+- `test_xcode` — `se-test-xcode` has no SE-owned script; the skill invokes XcodeBuildMCP MCP tools directly.
+
+**Contributor conventions:**
+
+- One wrapper file per skill domain under `extensions/se-tools/se-<skill>.ts`. Wire each via `registerSeTools()` in `extensions/se-tools/index.ts`.
+- Tools declare a TypeBox `parameters` schema. Validate required fields at the harness boundary; let the script validate its own per-mode flags.
+- Each tool's `promptGuidelines` should name the tool explicitly in every bullet (e.g. "Call `se_clean_gone` when ...").
+- Wrappers surface stderr via `isError: true` rather than throwing.
+- Scripts stay on disk after wrapping. Tests assert this (`scripts stay on disk as fallback`).
+- When a script emits JSON, return the parsed shape in `details` so renderers can consume it without re-parsing the text content.
+
 ### Skill frontmatter conventions
 
 Every `skills/<name>/SKILL.md` should declare:
