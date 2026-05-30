@@ -9,6 +9,8 @@ compatibility: npm, python3, vhs, ffmpeg
 
 Detect project type, recommend a capture tier, record visual evidence, upload to a public URL, and return markdown for PR inclusion.
 
+**Pi tool: `capture_demo`.** The mechanical pipeline (`scripts/capture-demo.py`) is wrapped as a typed Pi tool. Pass `subcommand` plus an `argv` array (forwarded verbatim to the script). Prefer the tool when registered; fall back to direct script invocation otherwise. Subcommands: `preflight`, `detect`, `recommend`, `stitch`, `screenshot-reel`, `terminal-recording`, `preview`, `upload`, `save-local`. Always run `capture_demo subcommand=preflight` first to confirm vhs / silicon / ffmpeg availability before choosing a capture tier.
+
 **Evidence means USING THE PRODUCT, not running tests.** "I ran npm test" is test evidence. Evidence capture is running the actual CLI command, opening the web app, making the API call, or triggering the feature. The distinction is absolute -- test output is never labeled "Demo" or "Screenshots."
 
 If real product usage is impractical (requires API keys, cloud deploy, paid services, bot tokens), say so explicitly: "Real evidence would require [X]. Recommending [fallback approach] instead." Do not silently skip to "no evidence needed" or substitute test output.
