@@ -15,9 +15,11 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
 import { registerCleanGoneTool } from "./se-clean-gone.ts"
 import { registerSessionTools } from "./se-sessions.ts"
 import { registerPulseTool } from "./se-pulse.ts"
+import { registerPrTools } from "./se-pr.ts"
 
 export function registerSeTools(pi: ExtensionAPI, packageRoot: string): void {
   registerCleanGoneTool(pi, packageRoot)
   registerSessionTools(pi, packageRoot)
   registerPulseTool(pi, packageRoot)
+  registerPrTools(pi, packageRoot)
 }

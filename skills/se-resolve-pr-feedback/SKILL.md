@@ -10,6 +10,17 @@ compatibility: gh, bun, jq, git
 
 Evaluate and fix PR review feedback, then reply and resolve threads. Spawns parallel agents for each thread.
 
+**Pi tools (preferred when registered):** the four review-comment scripts under `scripts/` are wrapped as typed Pi tools so the LLM picks the action by name from a typed menu instead of templating bash. The scripts stay on disk as fallback when Pi is not the harness or the tool is filtered.
+
+| Tool | Wraps | Purpose |
+|---|---|---|
+| `pr_comments_list` | `scripts/get-pr-comments` | List review comments on a PR (read) |
+| `pr_thread_get` | `scripts/get-thread-for-comment` | Resolve a comment node ID to its parent thread (read) |
+| `pr_thread_reply` | `scripts/reply-to-pr-thread` | Post a reply to a thread (write, body stdin-fed for markdown safety) |
+| `pr_thread_resolve` | `scripts/resolve-pr-thread` | Mark a thread resolved (write, idempotent) |
+
+Prefer the tools in this exact order: `pr_comments_list` → `pr_thread_get` per relevant comment → `pr_thread_reply` per fix → `pr_thread_resolve` per closed thread. Do not chain reply + resolve in one logical step; reviewers expect to read the acknowledgement before the thread closes.
+
 > **Agent time is cheap. Tech debt is expensive.**
 > Fix everything valid -- including nitpicks and low-priority items. If we're already in the code, fix it rather than punt it. Narrow exception: when implementing the suggested fix would actively make the code worse (violates a project rule in CLAUDE.md/AGENTS.md, adds dead defensive code, suppresses errors that should propagate, premature abstraction, restates code in comments), use the `declined` verdict and cite the specific harm. When in doubt, fix it.
 
