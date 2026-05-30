@@ -16,6 +16,8 @@ compatibility: git
 
 `se-product-pulse` queries the product's data sources for a given time window and produces a compact, single-page report covering usage, performance, errors, and followups. The report is saved to `docs/pulse-reports/` and the key points are surfaced in chat.
 
+**Pi tool: `pulse_report`.** When this package is installed, the mechanical save step has a typed surface: pass the rendered markdown plus the lookback window and the tool writes `docs/pulse-reports/<YYYY-MM-DD>-<window>.md` with a deterministic name and refuses to clobber an existing same-day report unless `overwrite=true` is passed. The LLM still composes the report body and reads `.software-engineering/config.local.yaml`; only the save step is lifted. Fall back to `Write` directly when `pulse_report` is not registered.
+
 The skill does not mutate the product, the database, or any external system. Its only writes are pulse settings appended to `.software-engineering/config.local.yaml` (the unified SE local config, gitignored, machine-local) and the report file (`docs/pulse-reports/...`). MCP and other data-source tools are invoked read-only; if a tool offers write modes, do not use them.
 
 ## Interaction Method
