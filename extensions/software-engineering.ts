@@ -200,6 +200,121 @@ const ResidualsReadSchema = Type.Object({
   includeAdvisory: Type.Optional(Type.Boolean()),
 })
 
+const ReadStateSchema = Type.Object({
+  verbose: Type.Optional(
+    Type.Boolean({
+      description: "Include recent entries (last 5 per type) in addition to current values.",
+    }),
+  ),
+})
+
+// ---------------------------------------------------------------------------
+// State rendering helpers (shared by /se-status, widget, se_read_state)
+// ---------------------------------------------------------------------------
+
+function colorGlyph(color: "green" | "red" | "unknown" | undefined): string {
+  switch (color) {
+    case "green":
+      return "✓"
+    case "red":
+      return "✗"
+    default:
+      return "?"
+  }
+}
+
+function shortTime(iso: string | undefined): string {
+  if (!iso) return ""
+  // Render HH:MM in local time.
+  try {
+    const d = new Date(iso)
+    const hh = d.getHours().toString().padStart(2, "0")
+    const mm = d.getMinutes().toString().padStart(2, "0")
+    return `${hh}:${mm}`
+  } catch {
+    return ""
+  }
+}
+
+interface SnapshotShape {
+  phase?: { phase: string; sliceId?: string; recordedAt: string }
+  worktree?: { path: string; branch: string; recordedAt: string }
+  testState?: { color: "green" | "red" | "unknown"; command: string; exitCode: number; durationMs?: number; recordedAt: string }
+  backlogActive: { id: string; title: string; status: string; priority?: string }[]
+  reviewResiduals: { title: string; severity: string; file?: string; section?: string }[]
+}
+
+function renderWidgetLine(s: SnapshotShape): string {
+  const parts: string[] = []
+  if (s.phase) parts.push(s.phase.phase)
+  if (s.worktree) parts.push(s.worktree.branch)
+  if (s.reviewResiduals.length > 0) {
+    parts.push(`${s.reviewResiduals.length} residual${s.reviewResiduals.length === 1 ? "" : "s"}`)
+  }
+  if (s.backlogActive.length > 0) parts.push(`backlog:${s.backlogActive.length}`)
+  if (s.testState) {
+    const when = shortTime(s.testState.recordedAt)
+    parts.push(`test ${when} ${colorGlyph(s.testState.color)}`)
+  }
+  return parts.length > 0 ? `SE: ${parts.join(" · ")}` : ""
+}
+
+function renderStatusBlock(s: SnapshotShape, verbose: boolean): string {
+  const lines: string[] = []
+  if (s.phase) {
+    lines.push(`Phase: ${s.phase.phase}${s.phase.sliceId ? " (" + s.phase.sliceId + ")" : ""}  @ ${s.phase.recordedAt}`)
+  } else {
+    lines.push("Phase: (none recorded yet)")
+  }
+  if (s.worktree) {
+    lines.push(`Worktree: ${s.worktree.branch}  → ${s.worktree.path}  @ ${s.worktree.recordedAt}`)
+  } else {
+    lines.push("Worktree: (none recorded yet)")
+  }
+  if (s.testState) {
+    const dur = s.testState.durationMs ? ` (${s.testState.durationMs}ms)` : ""
+    lines.push(
+      `Last test: ${s.testState.color.toUpperCase()} ${colorGlyph(s.testState.color)}  exit=${s.testState.exitCode}${dur}  @ ${s.testState.recordedAt}`,
+    )
+    lines.push(`           cmd: ${s.testState.command}`)
+  } else {
+    lines.push("Last test: (none recorded yet)")
+  }
+  if (s.reviewResiduals.length > 0) {
+    lines.push(`Review residuals: ${s.reviewResiduals.length} open`)
+    if (verbose) {
+      for (const r of s.reviewResiduals.slice(0, 5)) {
+        const loc = r.file ?? r.section ?? ""
+        lines.push(`  - [${r.severity}] ${r.title}${loc ? " (" + loc + ")" : ""}`)
+      }
+    }
+  } else {
+    lines.push("Review residuals: 0")
+  }
+  if (s.backlogActive.length > 0) {
+    lines.push(`Backlog: ${s.backlogActive.length} active`)
+    if (verbose) {
+      for (const b of s.backlogActive.slice(0, 5)) {
+        lines.push(`  - ${b.id} (${b.status}): ${b.title}`)
+      }
+    }
+  } else {
+    lines.push("Backlog: 0 active")
+  }
+  return lines.join("\n")
+}
+
+function isEmptySnapshot(s: SnapshotShape): boolean {
+  return !s.phase && !s.worktree && !s.testState && s.backlogActive.length === 0 && s.reviewResiduals.length === 0
+}
+
+const EMPTY_STATE_HINT =
+  "No SE state recorded yet.\n" +
+  "Likely first action:\n" +
+  "  • /se-plan  — if you're starting from a fresh idea\n" +
+  "  • /skill:se-worktree  — if you're picking up an existing branch\n" +
+  "  • just start coding  — phase, worktree, test-state will populate as you go"
+
 // ---------------------------------------------------------------------------
 // Extension entry point
 // ---------------------------------------------------------------------------
@@ -403,6 +518,50 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     },
   })
 
+  // -- /se-status command --------------------------------------------------
+  pi.registerCommand("se-status", {
+    description: "Print the current SE state: phase, worktree, last test colour, residuals, backlog.",
+    argumentHint: "[--verbose]",
+    handler: async (args, ctx) => {
+      const verbose = (args ?? "").trim() === "--verbose"
+      const snap = snapshotSEState(ctx) as SnapshotShape
+      const body = isEmptySnapshot(snap) ? EMPTY_STATE_HINT : renderStatusBlock(snap, verbose)
+      if (ctx.hasUI) {
+        ctx.ui.notify(body, "info")
+      } else {
+        // Print mode: write to stdout.
+        process.stdout.write(body + "\n")
+      }
+    },
+  })
+
+  // -- se_read_state tool --------------------------------------------------
+  pi.registerTool({
+    name: "se_read_state",
+    label: "SE: Read state",
+    description:
+      "Return the current SE state (phase, worktree, last test result, active backlog, unresolved review residuals) as a structured object. Use this instead of asking the user or guessing — the substrate is the source of truth.",
+    promptSnippet: "Read current SE state",
+    promptGuidelines: [
+      "Use se_read_state to check current SE phase / worktree / residuals / last test result before deciding the next action.",
+      "Call se_read_state at the start of any SE skill that branches on phase or test-state; do not re-derive state from chat.",
+      "Pass verbose=true only when the user explicitly asks for recent entries; the default summary is enough for decision-making.",
+    ],
+    parameters: ReadStateSchema,
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      if (!ctx) {
+        return { content: [{ type: "text", text: "No session context" }], isError: true }
+      }
+      const p = params as typeof ReadStateSchema.static
+      const snap = snapshotSEState(ctx) as SnapshotShape
+      const text = isEmptySnapshot(snap) ? EMPTY_STATE_HINT : renderStatusBlock(snap, p.verbose ?? false)
+      return {
+        content: [{ type: "text", text }],
+        details: snap,
+      }
+    },
+  })
+
   // -- bash test-state observer --------------------------------------------
   // Records se:test-state entries whenever an LLM-driven bash call (or
   // user_bash) matches the test-runner table. Observation only — refusal
@@ -457,18 +616,38 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
       )
     }
 
-    // SE state replay — surface a short status line on startup so the user
-    // and any subsequent skill prose can see what state survived /compact /
-    // /fork. Phase/test-state widget proper is task-016.
+    // SE state replay — surface the widget on startup/resume so users can
+    // see what state survived /compact / /fork without typing anything.
     if (event.reason === "startup" || event.reason === "resume") {
-      const snap = snapshotSEState(ctx)
-      const parts: string[] = []
-      if (snap.phase) parts.push(`phase=${snap.phase.phase}`)
-      if (snap.worktree) parts.push(`worktree=${snap.worktree.branch}`)
-      if (snap.testState) parts.push(`tests=${snap.testState.color}`)
-      if (snap.backlogActive.length > 0) parts.push(`backlog=${snap.backlogActive.length}`)
-      if (snap.reviewResiduals.length > 0) parts.push(`residuals=${snap.reviewResiduals.length}`)
-      ctx.ui.setStatus?.("se", parts.length > 0 ? parts.join(" · ") : "")
+      refreshSEWidget(ctx)
     }
   })
+
+  // Refresh the widget after every state-mutating tool. Cheap (one snapshot
+  // read) and predictable. tool_result handler fires after the entry has
+  // been appended, so the read sees the new value.
+  pi.on("tool_result", async (event, ctx) => {
+    if (!ctx?.hasUI) return
+    const mutatingTools = new Set([
+      "backlog_add",
+      "backlog_promote",
+      "backlog_remove",
+      "backlog_export",
+      "se_review_finding",
+    ])
+    if (mutatingTools.has(event.toolName)) refreshSEWidget(ctx)
+  })
+}
+
+function refreshSEWidget(ctx: { hasUI: boolean; ui: { setStatus?: (k: string, v: string) => void; setWidget?: (k: string, lines: string[]) => void } } & Parameters<typeof snapshotSEState>[0]): void {
+  if (!ctx.hasUI) return
+  const snap = snapshotSEState(ctx) as SnapshotShape
+  const line = renderWidgetLine(snap)
+  // Prefer setWidget when available (full bottom widget); fall back to
+  // setStatus (single token) for older Pi runtimes.
+  if (ctx.ui.setWidget) {
+    ctx.ui.setWidget("se", line ? [line] : [])
+  } else if (ctx.ui.setStatus) {
+    ctx.ui.setStatus("se", line)
+  }
 }

@@ -76,6 +76,8 @@ Determine how to proceed based on what was provided in `<input_document>`.
 
 2. **Setup Environment**
 
+   **Pi-native state read.** If the `se_read_state` tool is registered (provided by `extensions/software-engineering.ts`), call it once before doing any environment detection. It returns the current SE phase, worktree binding, last test colour, open review residuals, and active backlog — read from the session log, surviving `/compact`, `/fork`, and restart. Use the returned phase to decide whether to resume mid-flow rather than re-running Phase 0 triage. If the tool is not registered, fall through to the git-based detection below.
+
    First, check the current branch:
 
    ```bash
