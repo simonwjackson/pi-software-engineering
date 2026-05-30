@@ -194,15 +194,40 @@ Report removals as a short line: `Removed: task-007 (landed in #142), task-011 (
 
 When capturing a new item:
 
-1. Identify the smallest actionable follow-up.
+1. Identify the smallest **meaningful** follow-up — see Right-Sizing below. Smaller is not automatically better.
 2. Write a title that starts with a verb.
 3. Include source context: current skill, plan/PR/issue if known, and why it was deferred.
 4. Add acceptance criteria that describe observable completion.
 5. Include related repo-relative file paths when known. Never use absolute paths.
-6. Check for likely duplicates by searching existing backlog titles and labels before writing a new file.
-7. If a near-duplicate exists, update it instead of creating another item.
+6. Check for likely duplicates **and natural siblings** by searching existing backlog titles and labels before writing a new file.
+7. If a near-duplicate exists, update it instead of creating another item. If a related item exists that would realistically be done in the same swing of work, extend that item instead of creating a new one.
 8. Run the Context Capture probes below and fill the `context:` block with whatever is readily available. Omit fields that don't apply.
 9. Report the path created or updated and a one-line summary.
+
+## Right-Sizing
+
+The goal is durable follow-up, not granular bookkeeping. Over-fragmenting the backlog into many tiny items wastes time at every later stage — review, promote, and the work itself — because each item carries its own framing, acceptance criteria, and switching cost. Prefer one item that captures a coherent swing of work over several items that would land together anyway.
+
+**Consolidate into one item when the candidates share at least one of:**
+
+- The same module, file cluster, or architectural seam.
+- The same investigation or design decision (resolving one resolves the others).
+- A realistic single PR or single working session.
+- The same test surface — the criteria that prove one done would naturally prove the others.
+- The same root cause noticed in multiple places.
+
+When consolidating, expand the existing item's title to name the broader scope, append the new specifics to Acceptance Criteria and Related, and add a short note in Context describing the additional discovery. Do not lose the specifics by over-generalizing the title.
+
+**Keep as separate items when:**
+
+- They would land in different commits or PRs in any realistic plan.
+- They depend on different decisions and one could be done while the other is still being deliberated.
+- One is load-bearing for ongoing work and the other is genuinely "someday/maybe".
+- Bundling them would produce an item too large for a single `se-work` swing and would require `se-plan` just to break it back up.
+
+**Heuristic for the in-between case:** if you would honestly merge them at promotion time anyway, merge them now. If you would honestly split them at promotion time anyway, keep them split now.
+
+This bias toward consolidation does not override the Capture filters above — vague wishes, durable knowledge, and strategy direction still don't belong in the backlog at any granularity.
 
 ## Context Capture
 
