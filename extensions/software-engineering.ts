@@ -2,7 +2,7 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, realpathSy
 import { homedir } from "node:os"
 import { basename, dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const PACKAGE_AGENTS_DIR = resolve(PACKAGE_ROOT, "agents")

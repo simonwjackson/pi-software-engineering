@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { relative, resolve } from "node:path"
-import type { AgentEndEvent, ExtensionCommandContext } from "@mariozechner/pi-coding-agent"
+import type { AgentEndEvent, ExtensionCommandContext } from "@earendil-works/pi-coding-agent"
 import { nextRunnableUnit, parsePlanMarkdown, type LoopUnit } from "./plan-parser.ts"
 import { appendLoopEvent, completedUnitIds, createInitialState, resolveLoopState, saveLoopState, updateUnitStatus, type WorkLoopState } from "./state-store.ts"
 import { runVerifyCommand, verifyUnitFiles } from "./verification.ts"

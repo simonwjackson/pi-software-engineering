@@ -35,7 +35,7 @@ export function piSpawnSpec(args: string[]): { command: string; args: string[] }
 
   return {
     command: "nix",
-    args: ["shell", "nixpkgs#bun", "nixpkgs#nodejs", "--command", "bun", "x", "@mariozechner/pi-coding-agent", ...args],
+    args: ["shell", "nixpkgs#bun", "nixpkgs#nodejs", "--command", "bun", "x", "@earendil-works/pi-coding-agent", ...args],
   }
 }
 

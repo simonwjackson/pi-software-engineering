@@ -8,7 +8,7 @@ test("piSpawnSpec defaults to the nix bunx Pi launcher", () => {
   try {
     assert.deepEqual(piSpawnSpec(["--mode", "json", "-p", "hi"]), {
       command: "nix",
-      args: ["shell", "nixpkgs#bun", "nixpkgs#nodejs", "--command", "bun", "x", "@mariozechner/pi-coding-agent", "--mode", "json", "-p", "hi"],
+      args: ["shell", "nixpkgs#bun", "nixpkgs#nodejs", "--command", "bun", "x", "@earendil-works/pi-coding-agent", "--mode", "json", "-p", "hi"],
     })
   } finally {
     if (previous === undefined) delete process.env.SE_WORK_LOOP_PI_COMMAND

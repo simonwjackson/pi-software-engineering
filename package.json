@@ -36,26 +36,26 @@
     "pi-subagents"
   ],
   "peerDependencies": {
-    "@mariozechner/pi-agent-core": "*",
-    "@mariozechner/pi-ai": "*",
-    "@mariozechner/pi-coding-agent": "*",
-    "@mariozechner/pi-tui": "*",
-    "@sinclair/typebox": "*"
+    "@earendil-works/pi-agent-core": "*",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
   },
   "peerDependenciesMeta": {
-    "@mariozechner/pi-agent-core": {
+    "@earendil-works/pi-agent-core": {
       "optional": true
     },
-    "@mariozechner/pi-ai": {
+    "@earendil-works/pi-ai": {
       "optional": true
     },
-    "@mariozechner/pi-coding-agent": {
+    "@earendil-works/pi-coding-agent": {
       "optional": true
     },
-    "@mariozechner/pi-tui": {
+    "@earendil-works/pi-tui": {
       "optional": true
     },
-    "@sinclair/typebox": {
+    "typebox": {
       "optional": true
     }
   },

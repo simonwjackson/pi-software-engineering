@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs"
 import { basename, join } from "node:path"
-import type { Theme } from "@mariozechner/pi-coding-agent"
+import type { Theme } from "@earendil-works/pi-coding-agent"
 import { currentUnitForState, dismissLoop, markStopRequested, runtimeState } from "./controller.ts"
 import { runLoopInBackground } from "./background-runner.ts"
 import { listLoopStates, loopLocation, saveLoopState, type WorkLoopState } from "./state-store.ts"

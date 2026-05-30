@@ -1,4 +1,4 @@
-import type { Theme } from "@mariozechner/pi-coding-agent"
+import type { Theme } from "@earendil-works/pi-coding-agent"
 
 type TUI = { requestRender: () => void }
 type Component = { render: (width: number) => string[]; invalidate?: () => void; dispose?: () => void }

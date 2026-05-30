@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@mariozechner/pi-coding-agent"
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent"
 import { createStateFromPlan, currentUnitForState, dismissLoop, handleAgentEnd, markStopRequested, reconcileStateWithPlan, runLoop, runtimeState } from "./controller.ts"
 import { runLoopInBackground } from "./background-runner.ts"
 import { SeWorkLoopManagerOverlay } from "./manager-overlay.ts"
