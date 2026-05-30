@@ -15,9 +15,9 @@
  * Confidence anchors: 0 | 25 | 50 | 75 | 100.
  */
 
-import type { ExtensionAPI, ExtensionContext, Theme } from "@earendil-works/pi-coding-agent"
-import { Text } from "@earendil-works/pi-tui"
-import { Type, type Static, type TUnsafe } from "typebox"
+import type { ExtensionAPI, ExtensionContext, Theme } from "@mariozechner/pi-coding-agent"
+import { Text } from "@mariozechner/pi-tui"
+import { Type, type Static, type TUnsafe } from "@sinclair/typebox"
 
 const SEVERITIES = ["P0", "P1", "P2", "P3"] as const
 type Severity = (typeof SEVERITIES)[number]

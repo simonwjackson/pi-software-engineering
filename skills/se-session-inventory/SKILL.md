@@ -4,7 +4,7 @@ description: "Discover session files for a repo across Claude Code, Codex, and C
 user-invocable: false
 context: fork
 compatibility: python3, git
-argument-hint: [since=<duration>]
+argument-hint: "[since=<duration>]"
 disable-model-invocation: true
 allowed-tools: read bash
 ---

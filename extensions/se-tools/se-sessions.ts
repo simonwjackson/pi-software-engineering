@@ -16,8 +16,8 @@
 import { execFileSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { resolve } from "node:path"
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
-import { Type } from "typebox"
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
+import { Type } from "@sinclair/typebox"
 
 export function registerSessionTools(pi: ExtensionAPI, packageRoot: string): void {
   const discoverScript = resolve(

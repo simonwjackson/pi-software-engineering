@@ -18,7 +18,7 @@
  * of the synthesis flow) while exposing a one-stroke entry point.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
 
 import {
   DEFAULT_CODE_REVIEW_PERSONAS,

@@ -4,7 +4,7 @@ description: "Extract conversation skeleton or error signals from a single sessi
 user-invocable: false
 context: fork
 compatibility: python3
-argument-hint: <session-path>
+argument-hint: "<session-path>"
 disable-model-invocation: true
 allowed-tools: read bash
 ---

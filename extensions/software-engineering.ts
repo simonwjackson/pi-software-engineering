@@ -3,9 +3,9 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, realpathSy
 import { homedir } from "node:os"
 import { basename, dirname, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
-import { isBashToolResult } from "@earendil-works/pi-coding-agent"
-import { Type } from "typebox"
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
+import { isBashToolResult } from "@mariozechner/pi-coding-agent"
+import { Type } from "@sinclair/typebox"
 
 import {
   addBacklog,

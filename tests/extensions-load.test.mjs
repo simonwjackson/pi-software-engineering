@@ -26,13 +26,18 @@ test("package.json points pi.extensions at extant files only", () => {
   }
 })
 
-test("package.json peer-deps use the @earendil-works namespace and bare typebox", () => {
+test("package.json peer-deps use the @mariozechner namespace (Pi runtime resolver)", () => {
+  // Note: Pi v0.77 runtime still publishes under @mariozechner/* despite the
+  // @earendil-works alias appearing in the nix-store layout. Extensions loaded
+  // from a user's pi install must import @mariozechner/* names or the require
+  // resolver throws "Cannot find module ...". See task-009 rollback in commit
+  // history.
   const pkg = JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8"))
   const peers = Object.keys(pkg.peerDependencies ?? {})
   for (const name of peers) {
     assert.ok(
-      name.startsWith("@earendil-works/") || name === "typebox",
-      `peer-dep ${name} should use @earendil-works/ namespace or bare 'typebox' (post-task-009)`,
+      name.startsWith("@mariozechner/") || name === "@sinclair/typebox",
+      `peer-dep ${name} should use @mariozechner/ namespace or @sinclair/typebox (runtime resolution)`,
     )
   }
 })

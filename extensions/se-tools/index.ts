@@ -10,7 +10,7 @@
  * wires them all up from extensions/software-engineering.ts.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
 
 import { registerCleanGoneTool } from "./se-clean-gone.ts"
 import { registerSessionTools } from "./se-sessions.ts"

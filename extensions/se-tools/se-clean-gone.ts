@@ -10,8 +10,8 @@
 import { execFileSync } from "node:child_process"
 import { existsSync } from "node:fs"
 import { resolve } from "node:path"
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
-import { Type } from "typebox"
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
+import { Type } from "@sinclair/typebox"
 
 export function registerCleanGoneTool(pi: ExtensionAPI, packageRoot: string): void {
   const scriptPath = resolve(packageRoot, "skills/se-clean-gone-branches/scripts/clean-gone")
