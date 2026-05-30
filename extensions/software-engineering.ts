@@ -28,6 +28,7 @@ import {
   redactSecrets,
   type TestRunnerMatch,
 } from "./se-test-detect.ts"
+import { registerSeTools } from "./se-tools/index.ts"
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const PACKAGE_AGENTS_DIR = resolve(PACKAGE_ROOT, "agents")
@@ -325,6 +326,9 @@ const EMPTY_STATE_HINT =
 // ---------------------------------------------------------------------------
 
 export default function softwareEngineeringExtension(pi: ExtensionAPI) {
+  // -- scripty-skill tool wrappers (task-003) ------------------------------
+  registerSeTools(pi, PACKAGE_ROOT)
+
   // -- backlog_add ----------------------------------------------------------
   pi.registerTool({
     name: "backlog_add",

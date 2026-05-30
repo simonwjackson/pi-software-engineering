@@ -9,6 +9,8 @@ disable-model-invocation: true
 allowed-tools: read bash
 ---
 
+**Pi-native path:** call the `se_session_list` tool with `{ repo, since?, platform? }` instead of invoking `scripts/discover-sessions.sh` via bash. The tool returns a structured `paths` array and metadata; downstream agents pass each path into `se_session_skeleton` or `se_session_errors`.
+
 # Session inventory
 
 Agent-facing primitive. Discover session files and emit session metadata as JSONL across Claude Code, Codex, and Cursor.

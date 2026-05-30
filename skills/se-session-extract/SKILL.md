@@ -9,6 +9,8 @@ disable-model-invocation: true
 allowed-tools: read bash
 ---
 
+**Pi-native path:** call `se_session_skeleton({ sessionPath })` for the condensed conversation skeleton, or `se_session_errors({ sessionPath })` for failure-signal extraction. Both wrap this skill's Python scripts behind typed surfaces.
+
 # Session extract
 
 Agent-facing primitive. Extract filtered content from a single Claude Code, Codex, or Cursor session file — either a conversation skeleton or error signals.

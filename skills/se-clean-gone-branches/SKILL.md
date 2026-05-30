@@ -6,6 +6,9 @@ argument-hint: ""
 allowed-tools: bash
 ---
 
+**Pi-native path:** call the `se_clean_gone` tool with `{ dryRun, includeWorktrees }`. The tool wraps this skill's `scripts/clean-gone` and adds typed dryRun handling, structured results, and per-branch failure reporting. Prefer the tool over bash invocation of the script.
+
+
 # Clean Gone Branches
 
 Delete local branches whose remote tracking branch has been deleted, including any associated worktrees.
