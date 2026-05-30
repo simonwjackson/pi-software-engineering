@@ -63,6 +63,14 @@ labels:
   - follow-up
 created: YYYY-MM-DD
 source: se-work | se-debug | se-code-review | se-plan | user | other
+context:
+  cwd: .
+  branch: feat/example-branch
+  commit: a1b2c3d
+  repo: owner/name
+  pi_session: 019e5d76-4269-727d-ad39-64a67e06a241
+  invoked_by: se-debug
+  issue_ref: "#123"
 ---
 
 # Short action-oriented title
@@ -193,7 +201,47 @@ When capturing a new item:
 5. Include related repo-relative file paths when known. Never use absolute paths.
 6. Check for likely duplicates by searching existing backlog titles and labels before writing a new file.
 7. If a near-duplicate exists, update it instead of creating another item.
-8. Report the path created or updated and a one-line summary.
+8. Run the Context Capture probes below and fill the `context:` block with whatever is readily available. Omit fields that don't apply.
+9. Report the path created or updated and a one-line summary.
+
+## Context Capture
+
+When creating an item, fill the optional `context:` frontmatter block from cheap, deterministic probes. The goal is to record context that is **already available**, not to investigate.
+
+**Rules:**
+
+- Only run at capture time, never during review, refine, promote, or prune.
+- All fields are optional. Omit any field whose probe fails, returns empty, or doesn't apply. An item with no `context:` block is still valid.
+- Probes must be bounded and cheap: a handful of shell commands, no network calls, no walking the repo, no reading the session history.
+- Path-shaped fields are repo-relative or session-relative — never absolute.
+- If a calling skill already knows a field (its own name, the user's framing, an issue ID from context), it should pass it in rather than letting the probe guess.
+
+**Probes:**
+
+| Field | Probe | Notes |
+|---|---|---|
+| `cwd` | repo-relative path of current dir, or `.` at repo root | from `git rev-parse --show-prefix` |
+| `branch` | `git rev-parse --abbrev-ref HEAD` | omit if detached HEAD or not a git repo |
+| `commit` | `git rev-parse --short HEAD` | short SHA at capture time |
+| `repo` | parse `git remote get-url origin` to `owner/name` | omit if no `origin` or unparseable |
+| `pi_session` | see Pi session probe below | only when `PI_CODING_AGENT=true` |
+| `invoked_by` | passed in by the calling skill | falls back to the `source:` field |
+| `issue_ref` | passed in, or parsed from branch name (e.g. `fix/123-foo` → `#123`, `feat/AB-456-foo` → `AB-456`) | omit if ambiguous |
+
+**Pi session probe:**
+
+Pi does not export the current session ID. The session jsonl path is deterministic, so the ID can be recovered cheaply when `PI_CODING_AGENT=true`:
+
+1. Session directory = `$PI_CODING_AGENT_SESSION_DIR` if set, otherwise `${PI_AGENT_DIR:-$HOME/.pi/agent}/sessions/--<encoded-cwd>--` where `<encoded-cwd>` is the absolute cwd with leading `/` stripped and `/`, `\`, `:` replaced by `-`.
+2. The live session is the most recently modified `<ISO-timestamp>_<ULID>.jsonl` in that directory.
+3. Record the ULID only (the part after the underscore, without `.jsonl`). Do not record the full path — it isn't portable across machines or session-dir reconfiguration.
+4. If the directory doesn't exist or contains no jsonl files, omit `pi_session` silently. Do not create the directory.
+
+**What not to do:**
+
+- Do not record a "current document" field. Pi has no such concept; inferring it from the session history is searching, not probing.
+- Do not run probes during review or prune — stored `context:` is point-in-time at capture and is not refreshed.
+- Do not block capture on a failing probe. Silent omission is the default.
 
 ## Ecosystem Integration
 
