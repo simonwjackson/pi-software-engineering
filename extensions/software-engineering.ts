@@ -518,6 +518,93 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     },
   })
 
+  // -- CLI flags ------------------------------------------------------------
+  pi.registerFlag("se-review-tier", {
+    description: "Force SE review tier: '1' or '2'. Overrides /se-work's prose-based tier selection.",
+    type: "string",
+  })
+  pi.registerFlag("se-skip-worktree", {
+    description: "Skip the default worktree isolation step in /se-work. Use only for read-only investigations.",
+    type: "boolean",
+    default: false,
+  })
+  pi.registerFlag("se-no-pr", {
+    description: "After /se-work completes, do not open a PR — commit and stop. Mirrors 'no PRs, just commit' intent.",
+    type: "boolean",
+    default: false,
+  })
+
+  // -- resources_discover: per-repo SE skills/prompts/themes ----------------
+  // Scans ctx.cwd for documented project locations and returns existing-only
+  // paths so Pi can load per-repo SE content without settings.json churn.
+  pi.on("resources_discover", async (event, _ctx) => {
+    const cwd = event.cwd
+    const skillPaths: string[] = []
+    const promptPaths: string[] = []
+    const themePaths: string[] = []
+    for (const rel of [".software-engineering/skills", "docs/playbooks", "agents"]) {
+      const abs = resolve(cwd, rel)
+      if (existsSync(abs) && lstatSync(abs).isDirectory()) skillPaths.push(abs)
+    }
+    for (const rel of [".software-engineering/prompts"]) {
+      const abs = resolve(cwd, rel)
+      if (existsSync(abs) && lstatSync(abs).isDirectory()) promptPaths.push(abs)
+    }
+    for (const rel of [".software-engineering/themes"]) {
+      const abs = resolve(cwd, rel)
+      if (existsSync(abs) && lstatSync(abs).isDirectory()) themePaths.push(abs)
+    }
+    return { skillPaths, promptPaths, themePaths }
+  })
+
+  // -- keyboard shortcuts ---------------------------------------------------
+  // Graceful fallback: handlers degrade to a notify when no state to act on.
+  pi.registerShortcut("ctrl+g", {
+    description: "SE: jump to next review residual",
+    handler: ctx => {
+      const residuals = readReviewResiduals(ctx)
+      if (!ctx.hasUI) return
+      if (residuals.length === 0) {
+        ctx.ui.notify("No review residuals to jump to.", "info")
+        return
+      }
+      const first = residuals[0]
+      const loc = first.file ? `${first.file}${first.line ? ":" + first.line : ""}` : first.section ?? ""
+      ctx.ui.notify(`Next residual: [${first.severity}] ${first.title}${loc ? " " + loc : ""}`, "info")
+    },
+  })
+
+  pi.registerShortcut("ctrl+r", {
+    description: "SE: show last review summary",
+    handler: ctx => {
+      const residuals = readReviewResiduals(ctx)
+      if (!ctx.hasUI) return
+      if (residuals.length === 0) {
+        ctx.ui.notify("No review run recorded for this session yet. Run /se-review when ready.", "info")
+        return
+      }
+      const sev: Record<string, number> = {}
+      for (const r of residuals) sev[r.severity] = (sev[r.severity] ?? 0) + 1
+      const summary = Object.entries(sev)
+        .map(([s, n]) => `${s}:${n}`)
+        .join(" · ")
+      ctx.ui.notify(`Last review: ${residuals.length} residual(s) — ${summary}`, "info")
+    },
+  })
+
+  pi.registerShortcut("ctrl+w", {
+    description: "SE: show current worktree binding",
+    handler: ctx => {
+      const snap = snapshotSEState(ctx) as SnapshotShape
+      if (!ctx.hasUI) return
+      if (!snap.worktree) {
+        ctx.ui.notify("No worktree recorded. Use /skill:se-worktree to set one up.", "info")
+        return
+      }
+      ctx.ui.notify(`Worktree: ${snap.worktree.branch} → ${snap.worktree.path}`, "info")
+    },
+  })
+
   // -- /se-status command --------------------------------------------------
   pi.registerCommand("se-status", {
     description: "Print the current SE state: phase, worktree, last test colour, residuals, backlog.",
