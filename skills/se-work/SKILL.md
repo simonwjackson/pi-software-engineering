@@ -296,6 +296,11 @@ Determine how to proceed based on what was provided in `<input_document>`.
    If the plan has Implementation Units, use them as a starting guide for commit boundaries — but adapt based on what you find during implementation. A unit might need multiple atomic commits if it contains several behavior slices, or multiple small units might land together only when they form one inseparable purpose. Use each unit's Goal to inform the commit message.
 
    **Commit workflow:**
+
+   **Pi-native path (preferred when registered):** call the `se_atomic_commit` tool with typed `type`, optional `scope`, `subject`, optional `body`, and `paths`. The tool validates the conventional-commit format, refuses subjects containing `and also` / `;` / `+`, refuses paths outside the active worktree, and refuses to commit while `se:test-state` is RED unless you pass `allowRed: true` with a documented `body` explaining the deliberate WIP. The tool's schema is the source of truth for what a valid commit looks like; you do not need to re-derive the format here. Use this for every code commit during /se-work.
+
+   **Bash fallback** (when `se_atomic_commit` is not registered, or for vendored/generated commits where the convention does not apply — document why in the body):
+
    ```bash
    # 1. Inspect the full diff and identify the exact atomic slice to commit
    git diff

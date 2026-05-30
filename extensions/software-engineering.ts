@@ -1,6 +1,7 @@
+import { execSync } from "node:child_process"
 import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, realpathSync, symlinkSync, unlinkSync } from "node:fs"
 import { homedir } from "node:os"
-import { basename, dirname, resolve } from "node:path"
+import { basename, dirname, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent"
 import { isBashToolResult } from "@earendil-works/pi-coding-agent"
@@ -604,6 +605,188 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
             text: `Repro recorded: ${p.symptom}\n  observed: ${p.observed}\n  expected: ${p.expected}\n\nEdits are now unblocked for this session.`,
           },
         ],
+      }
+    },
+  })
+
+  // -- se_atomic_commit tool ----------------------------------------------
+  // Sanctioned commit path for /se-work code commits. Validates the
+  // conventional-commit shape, refuses RED commits unless allowRed is set,
+  // and rejects path arguments that fall outside the active worktree.
+  pi.registerTool({
+    name: "se_atomic_commit",
+    label: "SE: Atomic commit",
+    description:
+      "Stage the listed paths and create one atomic conventional-commit. Refuses to commit while the slice is RED unless allowRed is set with a documented reason. The single sanctioned commit path for /se-work code commits.",
+    promptSnippet: "Commit one atomic slice with a validated Conventional Commit message",
+    promptGuidelines: [
+      "Use se_atomic_commit whenever committing code in /se-work. Use the bash tool's `git commit` only for vendored/generated commits where the convention does not apply, and document the reason in the body.",
+      "One purpose per commit. If the slice still has untests-passing changes or is still RED, split into smaller commits or refactor the slice before calling this tool.",
+      "Pass allowRed only when committing a deliberate WIP / known-broken state with a documented reason. The tool annotates the commit body with a RED-state footer when allowRed is true.",
+    ],
+    parameters: Type.Object({
+      type: Type.Union(
+        [
+          Type.Literal("feat"),
+          Type.Literal("fix"),
+          Type.Literal("refactor"),
+          Type.Literal("test"),
+          Type.Literal("docs"),
+          Type.Literal("chore"),
+          Type.Literal("build"),
+          Type.Literal("ci"),
+          Type.Literal("perf"),
+          Type.Literal("style"),
+        ],
+        { description: "Conventional Commit type." },
+      ),
+      scope: Type.Optional(
+        Type.String({
+          description: "Optional kebab-case scope (e.g. 'se-state', 'se-loop', 'packaging').",
+          pattern: "^[a-z0-9][a-z0-9-]*$",
+          maxLength: 40,
+        }),
+      ),
+      subject: Type.String({
+        description: "Imperative-mood subject line, ≤72 chars, no 'and also'.",
+        minLength: 1,
+        maxLength: 72,
+      }),
+      body: Type.Optional(
+        Type.String({
+          description: "Optional body paragraph(s). Use blank lines between paragraphs.",
+        }),
+      ),
+      paths: Type.Array(Type.String(), {
+        description: "Repo-relative paths to stage. Must be a non-empty array; never use '.' or globs.",
+        minItems: 1,
+      }),
+      allowRed: Type.Optional(
+        Type.Boolean({
+          description: "Override the RED-state refusal. Must be paired with a body explaining why. Default false.",
+        }),
+      ),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      if (!ctx) {
+        return { content: [{ type: "text", text: "No session context" }], isError: true }
+      }
+      const p = params as {
+        type: string
+        scope?: string
+        subject: string
+        body?: string
+        paths: string[]
+        allowRed?: boolean
+      }
+
+      // -- Subject sanity ("and also" and double-purpose markers).
+      const subject = p.subject.trim()
+      const FORBIDDEN_TOKENS = ["and also", " + ", "; ", " & "]
+      for (const tok of FORBIDDEN_TOKENS) {
+        if (subject.toLowerCase().includes(tok)) {
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text: `se_atomic_commit refused: subject contains multi-purpose marker '${tok}'. Split into multiple commits or rewrite the subject to name one purpose.`,
+              },
+            ],
+          }
+        }
+      }
+
+      // -- Worktree scoping check.
+      const wt = readLatestSE<{ path: string; branch: string }>(ctx, SE_ENTRY_TYPES.WORKTREE)
+      const cwd = ctx.cwd
+      if (wt && wt.path) {
+        const wtAbs = resolve(wt.path)
+        for (const path of p.paths) {
+          const abs = resolve(cwd, path)
+          const rel = relative(wtAbs, abs)
+          if (rel.startsWith("..") || rel.startsWith("/")) {
+            return {
+              isError: true,
+              content: [
+                {
+                  type: "text",
+                  text: `se_atomic_commit refused: path '${path}' is outside the active worktree (${wt.path}). Move the change into the worktree or pass --se-skip-worktree if you really mean to commit outside it.`,
+                },
+              ],
+            }
+          }
+        }
+      }
+
+      // -- RED-state check.
+      const test = readLatestSE<{ color: "green" | "red" | "unknown"; command: string; recordedAt: string }>(
+        ctx,
+        SE_ENTRY_TYPES.TEST_STATE,
+      )
+      if (test && test.color === "red" && !p.allowRed) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `se_atomic_commit refused: last test run is RED (${test.command} @ ${test.recordedAt}). Either fix the slice and re-run the test, split into smaller commits where each is GREEN, or pass allowRed=true with a documented body explaining the deliberate WIP.`,
+            },
+          ],
+        }
+      }
+
+      // -- Compose the message.
+      const header = p.scope ? `${p.type}(${p.scope}): ${subject}` : `${p.type}: ${subject}`
+      const bodyLines: string[] = []
+      if (p.body) {
+        bodyLines.push("")
+        bodyLines.push(p.body.trim())
+      }
+      if (p.allowRed && test?.color === "red") {
+        bodyLines.push("")
+        bodyLines.push(`Committing RED: last test ${test.command} at ${test.recordedAt} reported exit ${test.exitCode}. Documented intentional WIP.`)
+      }
+      const message = [header, ...bodyLines].join("\n")
+
+      // -- Stage and commit.
+      try {
+        execSync(`git add -- ${p.paths.map(s => JSON.stringify(s)).join(" ")}`, { cwd, stdio: "pipe" })
+        execSync(`git commit -m ${JSON.stringify(message)}`, { cwd, stdio: "pipe" })
+      } catch (e: unknown) {
+        const err = e as { stderr?: Buffer; stdout?: Buffer; message?: string }
+        const out = (err.stderr ?? err.stdout ?? Buffer.from(err.message ?? "")).toString().trim()
+        return {
+          isError: true,
+          content: [
+            { type: "text", text: `se_atomic_commit failed:\n${out}` },
+          ],
+        }
+      }
+
+      // -- Read back what we committed for the renderer.
+      let sha = ""
+      let stat = ""
+      try {
+        sha = execSync("git rev-parse HEAD", { cwd, stdio: ["ignore", "pipe", "ignore"] })
+          .toString()
+          .trim()
+          .slice(0, 12)
+        stat = execSync("git show --stat --format= HEAD | tail -1", { cwd, stdio: ["ignore", "pipe", "ignore"] })
+          .toString()
+          .trim()
+      } catch {
+        // best-effort; commit succeeded, just couldn't summarize
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `[${sha}] ${header}${stat ? "\n  " + stat : ""}`,
+          },
+        ],
+        details: { sha, header, paths: p.paths, stat, message },
       }
     },
   })
