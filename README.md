@@ -38,6 +38,30 @@ The package is intentionally broad. Add future Software Engineering workflows, r
 
 Package agents are canonical in `agents/`. Package skills are canonical in `skills/`.
 
+### Cheap judge model (optional)
+
+Several SE skills (`se-code-review` Tier 2 personas, `se-doc-review`,
+`se-optimize`, `se-product-pulse`) do work that doesn't need the user's
+primary frontier model: scoring rubrics, checking against a fixed
+template, summarising long inputs against a short prompt. The package
+registers an optional `se-judge` provider for those calls when configured.
+
+Opt in via environment variables:
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `SE_JUDGE_MODEL` | **Required.** Model id at the underlying provider. | unset — provider not registered |
+| `SE_JUDGE_API` | One of `openai-chat-completions`, `openai-responses`, `anthropic-messages`. | `openai-chat-completions` |
+| `SE_JUDGE_BASE_URL` | Provider base URL. Required for non-default APIs. | unset |
+| `SE_JUDGE_API_KEY` | API key string or `$ENV_NAME` reference. | unset |
+| `SE_JUDGE_CONTEXT_WINDOW` | Override declared context window. | 128000 |
+| `SE_JUDGE_MAX_TOKENS` | Override declared max output tokens. | 4096 |
+
+When `SE_JUDGE_MODEL` is unset, the provider is not registered and SE
+skills fall through to the user's primary model. Skills that route
+through `se-judge` (currently `se-code-review`) do so as a deliberate
+intent expressed in their prose, not by changing the default model.
+
 ### Per-repo SE resources
 
 The `software-engineering` extension auto-discovers project-specific SE

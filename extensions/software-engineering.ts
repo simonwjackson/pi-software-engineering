@@ -326,6 +326,15 @@ const EMPTY_STATE_HINT =
 // ---------------------------------------------------------------------------
 
 export default function softwareEngineeringExtension(pi: ExtensionAPI) {
+  // -- se-judge model provider (task-006) ---------------------------------
+  // Optional cheap-judge provider for review/judge calls (se-code-review
+  // Tier 2 personas, se-doc-review, se-optimize, se-product-pulse). The
+  // user opts in by setting SE_JUDGE_MODEL plus the supporting env vars;
+  // skill prose then explicitly routes judge calls through 'se-judge'.
+  // When not configured, registration is skipped silently and SE skills
+  // fall through to the primary model.
+  registerJudgeProvider(pi)
+
   // -- scripty-skill tool wrappers (task-003) ------------------------------
   registerSeTools(pi, PACKAGE_ROOT)
 
@@ -1064,6 +1073,56 @@ function renderInjectedSEContextBlock(s: SnapshotShape): string {
   }
   lines.push("</se-state>")
   return lines.length > 2 ? lines.join("\n") : ""
+}
+
+/**
+ * Optionally register a 'se-judge' provider when the SE_JUDGE_MODEL
+ * environment variable is set. The provider's baseUrl/api/apiKey come
+ * from sibling env vars; if any required piece is missing the function
+ * returns silently and SE skills fall through to the primary model.
+ *
+ * Required: SE_JUDGE_MODEL (model id).
+ * Defaults: SE_JUDGE_API = openai-chat-completions,
+ *           SE_JUDGE_BASE_URL = (none, must be set for non-default APIs),
+ *           SE_JUDGE_API_KEY = literal key or $ENV_NAME reference.
+ */
+function registerJudgeProvider(pi: ExtensionAPI): void {
+  const model = process.env.SE_JUDGE_MODEL
+  if (!model) return
+  const api = (process.env.SE_JUDGE_API ?? "openai-chat-completions") as
+    | "openai-chat-completions"
+    | "openai-responses"
+    | "anthropic-messages"
+  const baseUrl = process.env.SE_JUDGE_BASE_URL
+  const apiKey = process.env.SE_JUDGE_API_KEY
+  const contextWindow = process.env.SE_JUDGE_CONTEXT_WINDOW
+    ? parseInt(process.env.SE_JUDGE_CONTEXT_WINDOW, 10)
+    : 128000
+  const maxTokens = process.env.SE_JUDGE_MAX_TOKENS
+    ? parseInt(process.env.SE_JUDGE_MAX_TOKENS, 10)
+    : 4096
+  try {
+    pi.registerProvider("se-judge", {
+      baseUrl,
+      apiKey,
+      api,
+      models: [
+        {
+          id: model,
+          name: `SE Judge (${model})`,
+          reasoning: false,
+          input: ["text"],
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          contextWindow,
+          maxTokens,
+        },
+      ],
+    })
+  } catch {
+    // Provider registration is best-effort. If the runtime rejects the
+    // shape (older Pi versions, missing baseUrl for a remote api), skill
+    // prose will fall through to the primary model.
+  }
 }
 
 function refreshSEWidget(ctx: { hasUI: boolean; ui: { setStatus?: (k: string, v: string) => void; setWidget?: (k: string, lines: string[]) => void } } & Parameters<typeof snapshotSEState>[0]): void {

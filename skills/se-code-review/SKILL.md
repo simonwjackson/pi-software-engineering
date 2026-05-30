@@ -9,6 +9,8 @@ compatibility: gh, python3, jq, git
 
 Reviews code changes using dynamically selected reviewer personas. Spawns parallel sub-agents that return structured JSON, then merges and deduplicates findings into a single report.
 
+**Judge model (optional cost optimization):** when the `se-judge` provider is registered (the user has set `SE_JUDGE_MODEL` plus the supporting env vars; see the README), Tier 2 persona sub-agents and any merge/dedup judge calls should explicitly route to `se-judge` instead of the user's primary frontier model. The judge model is intentionally cheaper and faster; persona scoring against a fixed rubric does not need frontier reasoning. When `se-judge` is not registered, fall through to the primary model with a one-time notify (do not hard-fail). The skill prose treats the routing as opt-in: respect `se-judge` when present, behave unchanged when absent.
+
 ## When to Use
 
 - Before creating a PR
