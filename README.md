@@ -77,6 +77,31 @@ erroring.
 Flag values are readable via `pi.getFlag(name)` inside the extension and
 through downstream skill prose.
 
+### Theme: `se-review`
+
+A theme tuned for review/finding readability ships under `themes/se-review.json`:
+
+- Severity-colored headings (red → high, orange → medium, blue → low).
+- Strong `toolDiffAdded` / `toolDiffRemoved` contrast for review patches.
+- Distinctive `mdCode` / `mdLink` colors for `file:line` references.
+- Soft `customMessageBg` so structured findings stand apart from prose.
+
+Select it via `/settings` or `"theme": "se-review"` in `~/.pi/agent/settings.json`.
+
+### Prompt templates
+
+Five `/se-*` prompt templates ship under `prompts/`:
+
+| Template | Pairs with | Purpose |
+|---|---|---|
+| `/se-plan-brief <topic>` | `se-plan` | Planning brief skeleton ready to hand to /se-plan |
+| `/se-brainstorm-seed <topic>` | `se-brainstorm` | Structured seed for ideation |
+| `/se-debug-repro <symptom>` | `se-debug` | Reinforces no-edits-before-diagnosis; cues the `se_capture_repro` tool |
+| `/se-pr-body <pr-title-or-branch>` | `se-work` shipping | PR body skeleton with SE conventions |
+| `/se-residual-ticket <finding>` | `se-code-review`, `se-doc-review` | Turn a residual finding into a tracker-ready issue body |
+
+All five accept an optional argument via `$@` and degrade gracefully when invoked with no argument.
+
 ### Test-runner observation
 
 The `software-engineering` extension observes every `bash` tool result and

@@ -22,7 +22,8 @@
     "agents",
     "extensions",
     "prompts",
-    "skills"
+    "skills",
+    "themes"
   ],
   "scripts": {
     "test": "node --test tests/*.mjs",
@@ -75,6 +76,9 @@
     "prompts": [
       "./prompts",
       "./node_modules/pi-subagents/prompts"
+    ],
+    "themes": [
+      "./themes"
     ]
   }
 }
