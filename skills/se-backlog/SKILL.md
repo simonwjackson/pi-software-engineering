@@ -192,17 +192,47 @@ Report removals as a short line: `Removed: task-007 (landed in #142), task-011 (
 
 ## Capture Rules
 
-When capturing a new item:
+When capturing a new item, **inspect the backlog directory before writing**. The default assumption is that a related item may already exist; creating a new file is a deliberate choice made after looking, not a reflex.
 
 1. Identify the smallest **meaningful** follow-up — see Right-Sizing below. Smaller is not automatically better.
-2. Write a title that starts with a verb.
-3. Include source context: current skill, plan/PR/issue if known, and why it was deferred.
-4. Add acceptance criteria that describe observable completion.
-5. Include related repo-relative file paths when known. Never use absolute paths.
-6. Check for likely duplicates **and natural siblings** by searching existing backlog titles and labels before writing a new file.
-7. If a near-duplicate exists, update it instead of creating another item. If a related item exists that would realistically be done in the same swing of work, extend that item instead of creating a new one.
-8. Run the Context Capture probes below and fill the `context:` block with whatever is readily available. Omit fields that don't apply.
-9. Report the path created or updated and a one-line summary.
+2. Write a draft title that starts with a verb. Hold it; do not write the file yet.
+3. **Pre-capture inspection** — see Inspect Before Writing below. List the backlog directory and read every item whose title, labels, related paths, or filename slug overlap with the new candidate.
+4. Decide one of three outcomes:
+   - **New item** — nothing in the backlog covers this; create a new file.
+   - **Extend** — an existing item is the same work or naturally absorbs this finding; add the new context, acceptance criteria, related paths, and a dated note to that file instead.
+   - **Consolidate** — two or more existing items plus the new finding would realistically be done together; merge them per Right-Sizing.
+5. For new items only: include source context (current skill, plan/PR/issue if known, why it was deferred), acceptance criteria that describe observable completion, and repo-relative related paths. Never use absolute paths.
+6. Run the Context Capture probes below and fill the `context:` block with whatever is readily available. Omit fields that don't apply.
+7. Report the path created or updated, the outcome chosen (new / extended / consolidated), and a one-line summary.
+
+## Inspect Before Writing
+
+The pre-capture inspection is cheap and bounded. Its purpose is to make a deliberate new-vs-extend-vs-consolidate decision, not to audit the whole backlog.
+
+**Procedure:**
+
+1. List the backlog directory (`ls backlog/` or the configured location). This is always cheap.
+2. Identify **overlap candidates** — existing items that share any of:
+   - Word stems with the draft title or filename slug.
+   - Labels the new item would carry.
+   - Related file paths the new item would touch.
+   - The same module/seam, source skill, or root cause noticed elsewhere.
+3. Read each overlap candidate's frontmatter (especially `labels`, `context.cwd`, `context.branch`) and the Context / Acceptance Criteria / Related sections. Do not read items that show no overlap signal.
+4. If nothing overlaps, proceed to create a new item.
+5. If overlap is real, choose **extend** or **consolidate** per Right-Sizing. Prefer extending one existing item over consolidating several when the choice is close — fewer merges is fewer chances to lose specifics.
+
+**Bounds:**
+
+- Do not read every file in the backlog. Filename + frontmatter scanning is enough to pick overlap candidates.
+- If the backlog has so many items that even the overlap-candidate read is expensive, that is a signal to prune, not a reason to skip the inspection.
+- Do not run the inspection during Review, Refine, Promote, or Prune — those flows already work from the directory contents.
+
+**When extending an existing item:**
+
+- Expand the title only if the broader scope is now correct; do not over-generalize away the specifics.
+- Append to Acceptance Criteria and Related rather than rewriting them.
+- Add a dated note under Context or Notes summarizing the new discovery and which session/skill found it (the existing `context:` block stays as the original capture's point-in-time snapshot — do not overwrite it).
+- Bump `status` only if the new finding actually changes readiness; do not churn metadata.
 
 ## Right-Sizing
 
