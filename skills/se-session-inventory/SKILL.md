@@ -3,6 +3,10 @@ name: se-session-inventory
 description: "Discover session files for a repo across Claude Code, Codex, and Cursor, and extract session metadata (timestamps, branch, cwd, size, platform). Invoked by session-research agents — not intended for direct user queries."
 user-invocable: false
 context: fork
+compatibility: python3, git
+argument-hint: [since=<duration>]
+disable-model-invocation: true
+allowed-tools: read bash
 ---
 
 # Session inventory

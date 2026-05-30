@@ -1,6 +1,8 @@
 ---
 name: se-riffrec-feedback-analysis
 description: Riffrec product-feedback workflow. ALWAYS load when the user posts a `riffrec-*.zip`, a bundle with `session.json` + `events.json` + `recording.webm` + `voice.webm`, a video/audio recording for product feedback, or asks how to capture and share Riffrec sessions. Routes between setup, quick bug report, and extensive analysis.
+compatibility: python3
+argument-hint: <riffrec-zip-path>
 ---
 
 # Riffrec Feedback Analysis

@@ -3,6 +3,10 @@ name: se-session-extract
 description: "Extract conversation skeleton or error signals from a single session file at a given path. Invoked by session-research agents after they have selected which sessions to deep-dive — not intended for direct user queries."
 user-invocable: false
 context: fork
+compatibility: python3
+argument-hint: <session-path>
+disable-model-invocation: true
+allowed-tools: read bash
 ---
 
 # Session extract

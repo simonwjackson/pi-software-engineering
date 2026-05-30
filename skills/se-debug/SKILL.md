@@ -2,6 +2,7 @@
 name: se-debug
 description: 'Systematically find root causes and fix bugs. Use when debugging errors, investigating test failures, reproducing bugs from issue trackers (GitHub, Linear, Jira), or when stuck on a problem after failed fix attempts. Also use when the user says ''debug this'', ''why is this failing'', ''fix this bug'', ''trace this error'', or pastes stack traces, error messages, or issue references.'
 argument-hint: "[issue reference, error message, test path, or description of broken behavior]"
+compatibility: gh, npm, bun, git
 ---
 
 # Debug and Fix

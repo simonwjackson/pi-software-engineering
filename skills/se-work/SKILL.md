@@ -2,6 +2,7 @@
 name: se-work
 description: Execute work efficiently while maintaining quality and finishing features, defaulting to TDD/ATDD for behavior-bearing coding work
 argument-hint: "[Plan doc path or description of work. Blank to auto use latest plan doc]"
+compatibility: gh, npm, go, Rails, pytest, git
 ---
 
 # Work Execution Command

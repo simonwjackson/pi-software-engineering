@@ -2,6 +2,7 @@
 name: se-strategy
 description: "Create or maintain STRATEGY.md - the product's target problem, approach, users, key metrics, and tracks of work. Use when starting a new product, updating direction, or when prompts like 'write our strategy', 'update the roadmap', 'what are we working on', or 'set up the strategy doc' come up. Also triggers when se-ideate, se-brainstorm, or se-plan need upstream grounding and no strategy doc exists yet."
 argument-hint: "[optional: section to revisit, e.g. 'metrics' or 'approach']"
+compatibility: none
 ---
 
 # Product Strategy

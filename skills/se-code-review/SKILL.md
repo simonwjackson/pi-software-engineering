@@ -2,6 +2,7 @@
 name: se-code-review
 description: "Structured code review using tiered persona agents, confidense-gated findings, and a merge/dedup pipeline. Use when reviewing code changes before creating a PR."
 argument-hint: "[blank to review current branch, or provide PR link]"
+compatibility: gh, python3, jq, git
 ---
 
 # Code Review

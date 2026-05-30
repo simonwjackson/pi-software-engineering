@@ -1,6 +1,8 @@
 ---
 name: se-compound
 description: Document a recently solved problem to compound your team's knowledge
+compatibility: gh, python3, git
+argument-hint: [topic]
 ---
 
 # /se-compound

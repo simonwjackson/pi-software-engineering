@@ -2,6 +2,7 @@
 name: se-test-browser
 description: Run browser tests on pages affected by current PR or branch
 argument-hint: "[PR number, branch name, 'current', or --port PORT]"
+compatibility: gh, npm, Rails, git
 ---
 
 # Browser Test Skill

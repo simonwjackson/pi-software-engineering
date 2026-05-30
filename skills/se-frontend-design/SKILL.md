@@ -1,6 +1,8 @@
 ---
 name: se-frontend-design
 description: 'Build web interfaces with genuine design quality, not AI slop. Use for any frontend work - landing pages, web apps, dashboards, admin panels, components, interactive experiences. Activates for both greenfield builds and modifications to existing applications. Detects existing design systems and respects them. Covers composition, typography, color, motion, and copy. Verifies results via screenshots before declaring done.'
+compatibility: none
+argument-hint: [area]
 ---
 
 # Frontend Design

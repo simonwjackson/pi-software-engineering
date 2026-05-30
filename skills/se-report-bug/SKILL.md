@@ -3,6 +3,7 @@ name: se-report-bug
 description: Report a bug in the software-engineering plugin
 argument-hint: "[optional: brief description of the bug]"
 disable-model-invocation: true
+compatibility: gh
 ---
 
 # Report a Software Engineering Plugin Bug

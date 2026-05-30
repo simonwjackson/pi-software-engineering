@@ -1,6 +1,8 @@
 ---
 name: se-backlog
 description: Ambient engineering backlog skill for capturing, reviewing, refining, promoting, and pruning durable follow-up work in a repo-local Backlog.md-style backlog. Use when the user says to park something, add it to the backlog, save for later, show deferred work, turn a backlog item into work, clean up stale backlog items, or when another SE skill discovers useful out-of-scope work that should not be folded into the current atomic commit.
+compatibility: git
+argument-hint: [capture | review | promote | prune] [topic]
 ---
 
 # Engineering Backlog

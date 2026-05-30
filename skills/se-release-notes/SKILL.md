@@ -3,6 +3,7 @@ name: se-release-notes
 description: Summarize recent software-engineering plugin releases, or answer a specific question about a past release with a version citation. Use when the user types `/se-release-notes` or asks "what changed in software-engineering recently?" or "what happened to `<skill-name>`?".
 argument-hint: "[optional: question about a past release]"
 disable-model-invocation: true
+compatibility: gh, python3
 ---
 
 # Software Engineering Release Notes

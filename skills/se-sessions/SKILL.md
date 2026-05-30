@@ -1,6 +1,8 @@
 ---
 name: se-sessions
 description: "Search and ask questions about your coding agent session history. Use when asking what you worked on, what was tried before, how a problem was investigated across sessions, what happened recently, or any question about past agent sessions. Also use when the user references prior sessions, previous attempts, or past investigations — even without saying 'sessions' explicitly."
+compatibility: git
+argument-hint: <question>
 ---
 
 # /se-sessions

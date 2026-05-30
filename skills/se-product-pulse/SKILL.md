@@ -9,6 +9,7 @@ allowed-tools:
   - Grep
   - Bash
   - AskUserQuestion
+compatibility: git
 ---
 
 # Product Pulse

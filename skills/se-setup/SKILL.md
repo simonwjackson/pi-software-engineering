@@ -2,6 +2,8 @@
 name: se-setup
 description: "Diagnose and configure software-engineering environment. Checks CLI dependencies, plugin version, and repo-local config. Offers guided installation for missing tools. Use when troubleshooting missing tools, verifying setup, or before onboarding."
 disable-model-invocation: true
+compatibility: npm, vhs, ffmpeg, jq, git
+argument-hint: ""
 ---
 
 # Software Engineering Setup

@@ -3,6 +3,7 @@ name: se-agent-native-audit
 description: Run comprehensive agent-native architecture review with scored principles
 argument-hint: "[optional: specific principle to audit]"
 disable-model-invocation: true
+compatibility: none
 ---
 
 # Agent-Native Architecture Audit

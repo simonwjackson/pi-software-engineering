@@ -6,6 +6,7 @@ allowed-tools:
   - Read
   - Write
   - WebFetch
+compatibility: jq
 ---
 
 # Proof - Collaborative Markdown Editor

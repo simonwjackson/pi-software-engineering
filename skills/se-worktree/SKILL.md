@@ -2,6 +2,8 @@
 name: se-worktree
 description: Create an isolated git worktree for feature work or PR review. Use by default when `se-work` starts coding work so the main checkout stays clean.
 allowed-tools: Bash(bash *worktree-manager.sh)
+compatibility: git
+argument-hint: [branch-name]
 ---
 
 # Worktree Creation
