@@ -20,6 +20,7 @@
     "README.md",
     "LICENSE",
     "agents",
+    "docs/gallery",
     "extensions",
     "prompts",
     "skills",
@@ -77,6 +78,7 @@
       "./prompts",
       "./node_modules/pi-subagents/prompts"
     ],
+    "image": "https://raw.githubusercontent.com/simonwjackson/pi-software-engineering/main/docs/gallery/card.png",
     "themes": [
       "./themes"
     ]

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16181d"/>
+      <stop offset="1" stop-color="#0d1117"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#87afff"/>
+      <stop offset="1" stop-color="#5fafd7"/>
+    </linearGradient>
+    <style>
+      .h1 { font: 600 56px ui-monospace, "JetBrains Mono", "Fira Code", monospace; fill: #ffffff; }
+      .h2 { font: 400 24px ui-monospace, monospace; fill: #afd7ff; }
+      .label { font: 600 18px ui-monospace, monospace; fill: #87afff; letter-spacing: 1px; }
+      .item { font: 400 20px ui-monospace, monospace; fill: #e4e6eb; }
+      .muted { font: 400 16px ui-monospace, monospace; fill: #8b949e; }
+      .ok { fill: #5fd75f; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="0" width="6" height="630" fill="url(#accent)"/>
+
+  <text x="60" y="80" class="h1">pi-software-engineering</text>
+  <text x="60" y="118" class="h2">Test-first, atomic-commit, finishable software engineering for Pi.</text>
+
+  <text x="60" y="190" class="label">COMMANDS</text>
+  <text x="60" y="222" class="item">/se-work · /se-plan · /se-review · /se-doc-review</text>
+  <text x="60" y="252" class="item">/se-research · /se-status · /se-brainstorm · /se-debug</text>
+
+  <text x="60" y="320" class="label">TOOLS</text>
+  <text x="60" y="352" class="item">se_atomic_commit · se_capture_repro · se_read_state</text>
+  <text x="60" y="382" class="item">se_review_finding · backlog_* · pr_thread_* · pulse_report</text>
+  <text x="60" y="412" class="item">gemini_image_* · capture_demo · se_session_*</text>
+
+  <text x="60" y="480" class="label">CONTROL PLANE</text>
+  <text x="60" y="512" class="item">alt+s status · alt+r residuals · alt+w worktree shortcuts</text>
+  <text x="60" y="542" class="item">--se-review-tier · --se-skip-worktree · --se-debug-strict flags</text>
+
+  <text x="60" y="600" class="muted">extensions/ · skills/ · prompts/ · themes/ · agents/   ·   90+ tests</text>
+</svg>

@@ -24,6 +24,8 @@ This package includes:
 Decision records for retired surfaces live under `decisions/`. The SE state
 substrate and entry-type catalogue are documented in `docs/SE-STATE.md`.
 
+![pi-software-engineering gallery card](docs/gallery/card.png)
+
 ## Power-user skills
 
 Three skills are `/skill:name`-only and intentionally hidden from auto-invocation to keep the system prompt small:
