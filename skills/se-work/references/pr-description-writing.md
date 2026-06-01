@@ -4,6 +4,12 @@ How to resolve the right commit range and compose a PR title and body. Loaded on
 
 Step Pre-A resolves the commit range, diff, and (for existing PRs) the current PR body. Steps A through H assume Pre-A's outputs are in context.
 
+## Publishing is gated — `se_pr_publish`
+
+This guide composes the body; it does not publish it. Under Pi, the assembled title and body are published through the `se_pr_publish` tool, never a raw `gh pr create` / `gh pr edit --body` (the `se-pr-gate` guard blocks those by default). The tool is a mechanical contract, not advice: it **refuses** a body that lacks the risk line, the thematic breaks, the Software Engineering badge, or (for medium/high risk) a `## Post-Deploy Monitoring` section, and it refuses hand-computed diff anchors.
+
+Write every file link as a `{{file:<path>}}` placeholder. `se_pr_publish` computes the correct Files-Changed diff anchor itself and expands the placeholder, so a model never hand-computes a sha256 (the historical source of broken anchor links). Pass the honest `risk` level and, for genuinely trivial PRs, `trivial: true`. On non-Pi harnesses without the tool, follow Step G's assembly order manually and apply `gh pr create/edit --body-file` per `commit-pr-workflow.md`.
+
 ---
 
 ## Step Pre-A: Resolve the PR commit range and diff
@@ -255,13 +261,15 @@ When the AI implemented the change, the description is a report to a supervisor,
 
 Whenever the body names a real file path more than once, or the file is the load-bearing artifact for the change, link it. The link target depends on whether the file is *in this PR's diff* or *referenced but unchanged*.
 
+**Under Pi, do not build these links by hand.** Write `{{file:<path>}}` and let `se_pr_publish` compute the anchor and expand the placeholder. Hand-computing sha256 anchors is the historical cause of broken Files-Changed links; the tool refuses any anchor whose hash does not match its path text. The blob-URL fallback below still applies for files referenced but not changed in the PR.
+
 **Default: diff anchor.** For files modified, created, or deleted in this PR, link to the file's anchor in the Files Changed tab:
 
 ```
 [`<path>`](https://github.com/<owner>/<repo>/pull/<N>/files#diff-<sha256-of-path>)
 ```
 
-The anchor is the lowercase hex SHA-256 of the file path string (UTF-8, no newline). One line of shell to compute it:
+The anchor is the lowercase hex SHA-256 of the file path string (UTF-8, no newline). Under Pi this is computed by `se_pr_publish` from the `{{file:<path>}}` placeholder. On other harnesses, compute it in one line of shell:
 
 ```bash
 printf '%s' '<path>' | sha256sum | awk '{print $1}'
@@ -393,9 +401,12 @@ The visible body (sections 1–11) answers "should I read the code?" The folded 
 
 | Harness | `LOGO` | `COLOR` |
 |---------|--------|---------|
+| Pi | (omit logo param) | `5B21B6` |
 | Claude Code | `claude` | `D97757` |
 | Codex | (omit logo param) | `000000` |
 | Gemini CLI | `googlegemini` | `4285F4` |
+
+Pi is the default harness for this project; use the Pi row unless the session is running under a different harness. When running under Pi, the model line is the underlying model with its harness shown as Pi, e.g. `![Pi](https://img.shields.io/badge/Pi-5B21B6)`.
 
 **Model slug:** Replace spaces with underscores. Append context window and thinking level in parentheses if known. URL-encode literal parens as `%28` and `%29` — unencoded `(` and `)` inside a markdown image URL break some commit-message parsers (notably release-please's conventional-commits parser, which fails the whole commit on encountering them and silently skips it from the changelog). Examples: `Opus_4.6_%281M,_Extended_Thinking%29`, `Sonnet_4.6_%28200K%29`, `Gemini_3.1_Pro`.
 

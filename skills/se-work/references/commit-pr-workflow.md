@@ -113,7 +113,14 @@ Include any Phase 3 context passed by `shipping-workflow.md`: testing notes, ope
 
 ### 6. Create or update the PR
 
-Write the body to a temp file and pass it with `--body-file`. Never pipe stdin, use `--body-file -`, or use `--body "$(cat ...)"`.
+**Default path (Pi): the `se_pr_publish` tool.** It is the only sanctioned way to set a PR body — raw `gh pr create` / `gh pr edit --body*` is blocked by the `se-pr-gate` guard. The tool validates the PR-description contract (risk line first, thematic breaks, Software Engineering badge, monitoring section for medium/high risk) and refuses a non-compliant body. Write every file reference in the body as a `{{file:<path>}}` placeholder; the tool computes the correct diff anchor. Pass the honest `risk` level; set `trivial: true` only for typo/dep-bump/one-line-config PRs.
+
+- New PR: `se_pr_publish` with `mode: "create"`, `title`, `body`, `risk`.
+- Existing PR: preview first (report the new title, quote the first two summary sentences, report total body line count, ask whether to apply), then call `se_pr_publish` with `mode: "edit"`, `pr`, `body`, `risk`.
+
+The tool reports the PR URL on success and a structured refusal listing each violated rule on failure. Fix the body and call it again.
+
+**Fallback (no `se_pr_publish` tool — non-Pi harness or `--se-pr-gate=false`).** Follow Step G's assembly order manually, write the body to a temp file, and pass it with `--body-file`. Never pipe stdin, use `--body-file -`, or use `--body "$(cat ...)"`.
 
 ```bash
 BODY_FILE=$(mktemp "${TMPDIR:-/tmp}/se-pr-body.XXXXXX") && cat > "$BODY_FILE" <<'__SE_PR_BODY_END__'
@@ -121,23 +128,9 @@ BODY_FILE=$(mktemp "${TMPDIR:-/tmp}/se-pr-body.XXXXXX") && cat > "$BODY_FILE" <<
 __SE_PR_BODY_END__
 ```
 
-For a new PR:
-
 ```bash
-gh pr create --title "<TITLE>" --body-file "$BODY_FILE"
-```
-
-For an existing PR, preview before applying:
-
-- report the new title and length
-- quote the first two summary sentences
-- report total body line count
-- ask whether to apply
-
-If confirmed:
-
-```bash
-gh pr edit --title "<TITLE>" --body-file "$BODY_FILE"
+gh pr create --title "<TITLE>" --body-file "$BODY_FILE"   # new PR
+gh pr edit --title "<TITLE>" --body-file "$BODY_FILE"     # existing PR, after the preview/confirm above
 ```
 
 ### 7. Report
@@ -156,7 +149,7 @@ gh pr view --web
 4. Apply any user focus as steering, not override. Do not fabricate content the diff does not support.
 5. Preserve existing `## Demo` or `## Screenshots` blocks unless the user asks to refresh/remove them.
 6. Preview the new title, summary lead, and body length. Ask before applying.
-7. Apply with `gh pr edit --body-file` as above and report the PR URL.
+7. Apply with `se_pr_publish` (`mode: "edit"`) — or the `gh pr edit --body-file` fallback when the tool is unavailable — and report the PR URL.
 
 ## Description-only workflow
 

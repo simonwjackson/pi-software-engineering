@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process"
-import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, realpathSync, symlinkSync, unlinkSync } from "node:fs"
-import { homedir } from "node:os"
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readlinkSync, realpathSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs"
+import { homedir, tmpdir } from "node:os"
 import { basename, dirname, relative, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent"
@@ -35,6 +35,14 @@ import {
   redactSecrets,
   type TestRunnerMatch,
 } from "./se-test-detect.ts"
+import {
+  expandFilePlaceholders,
+  hasFilePlaceholders,
+  validatePrBody,
+  type PrBodyViolation,
+  type PrLinkContext,
+  type RiskLevel,
+} from "./pr-body-contract.ts"
 import { registerSeTools } from "./se-tools/index.ts"
 import { registerSeSubagentCommands } from "./se-subagent/index.ts"
 
@@ -603,6 +611,12 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     type: "boolean",
     default: false,
   })
+  pi.registerFlag("se-pr-gate", {
+    description:
+      "Block raw `gh pr create` / `gh pr edit --body*` in bash and route PR bodies through se_pr_publish (contract validation + correct diff anchors). Default true; pass --se-pr-gate=false to allow raw gh.",
+    type: "boolean",
+    default: true,
+  })
 
   // -- se_capture_repro tool ------------------------------------------------
   pi.registerTool({
@@ -850,6 +864,199 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     },
   })
 
+  // -- se_pr_publish tool --------------------------------------------------
+  // Sanctioned path for creating/updating a PR body. Validates the body
+  // against the structural contract (pr-body-contract.ts) and refuses to
+  // publish a non-compliant body — the same boundary posture as
+  // se_atomic_commit. Owns diff-anchor computation: authors write
+  // {{file:<path>}} placeholders and the tool expands them into correct
+  // clickable Files-Changed links, so a model never hand-computes a sha256.
+  pi.registerTool({
+    name: "se_pr_publish",
+    label: "SE: Publish PR body",
+    description:
+      "Create or update a GitHub PR with a body validated against the SE PR-description contract. Refuses non-compliant bodies (missing risk line, badge, thematic breaks, monitoring section, or wrong diff anchors). Write file links as {{file:<path>}} placeholders; the tool computes the correct anchors. The single sanctioned path for `gh pr create` / `gh pr edit --body` in /se-work.",
+    promptSnippet: "Create or update a PR with a contract-validated body",
+    promptGuidelines: [
+      "Use se_pr_publish for every PR body create/update in /se-work instead of calling `gh pr create` / `gh pr edit --body` via bash.",
+      "Place file references as {{file:path/to/file}} placeholders; the tool expands them into correct diff-anchor links. Never hand-compute a sha256 anchor.",
+      "Pass the honest risk level. medium/high require a `## Post-Deploy Monitoring` section. Set trivial=true only for typo/dep-bump/one-line-config PRs.",
+      "Read skills/se-work/references/pr-description-writing.md to compose the body; this tool enforces the structure, it does not compose it.",
+    ],
+    parameters: Type.Object({
+      mode: Type.Optional(
+        Type.Union([Type.Literal("create"), Type.Literal("edit")], {
+          description: "Create a new PR or edit an existing one. Default create.",
+        }),
+      ),
+      pr: Type.Optional(Type.String({ description: "PR number or URL. Required for mode=edit." })),
+      title: Type.Optional(Type.String({ description: "PR title. Required for mode=create." })),
+      body: Type.String({
+        description: "PR body markdown. Use {{file:<path>}} placeholders for file links.",
+        minLength: 1,
+      }),
+      risk: Type.Union(
+        [Type.Literal("low"), Type.Literal("low-medium"), Type.Literal("medium"), Type.Literal("high")],
+        { description: "Honest risk level. Drives which sections are mandatory." },
+      ),
+      trivial: Type.Optional(
+        Type.Boolean({
+          description: "Trivial PR (typo/dep-bump/one-line config): skip risk line and structure. Badge still required. Default false.",
+        }),
+      ),
+      requireMonitoring: Type.Optional(
+        Type.Boolean({ description: "Force-require a monitoring section regardless of risk level." }),
+      ),
+      owner: Type.Optional(Type.String({ description: "GitHub owner. Autodetected via gh when omitted." })),
+      repo: Type.Optional(Type.String({ description: "GitHub repo. Autodetected via gh when omitted." })),
+      dryRun: Type.Optional(
+        Type.Boolean({ description: "Validate and expand only; do not call gh. Default false." }),
+      ),
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      if (!ctx) return { isError: true, content: [{ type: "text", text: "No session context" }] }
+      const p = params as {
+        mode?: "create" | "edit"
+        pr?: string
+        title?: string
+        body: string
+        risk: RiskLevel
+        trivial?: boolean
+        requireMonitoring?: boolean
+        owner?: string
+        repo?: string
+        dryRun?: boolean
+      }
+      const mode = p.mode ?? "create"
+      const cwd = ctx.cwd
+      const opts = { risk: p.risk, trivial: p.trivial, requireMonitoring: p.requireMonitoring }
+      const fail = (text: string) => ({ isError: true as const, content: [{ type: "text" as const, text }] })
+
+      if (mode === "edit" && !p.pr) return fail("se_pr_publish refused: mode=edit requires `pr`.")
+      if (mode === "create" && !p.title) return fail("se_pr_publish refused: mode=create requires `title`.")
+
+      // Resolve owner/repo (needed to build diff-anchor URLs).
+      let owner = p.owner
+      let repo = p.repo
+      if (!owner || !repo) {
+        try {
+          const nwo = execSync("gh repo view --json nameWithOwner --jq .nameWithOwner", {
+            cwd,
+            stdio: ["ignore", "pipe", "ignore"],
+          })
+            .toString()
+            .trim()
+          const slash = nwo.indexOf("/")
+          owner = owner ?? nwo.slice(0, slash)
+          repo = repo ?? nwo.slice(slash + 1)
+        } catch {
+          return fail("se_pr_publish: could not autodetect owner/repo via `gh repo view`. Pass owner and repo explicitly.")
+        }
+      }
+
+      const parsePr = (ref: string): number | undefined => {
+        const matches = ref.match(/\d+/g)
+        const last = matches?.at(-1)
+        return last ? Number(last) : undefined
+      }
+
+      if (mode === "edit") {
+        const prNum = parsePr(p.pr as string)
+        if (!prNum) return fail(`se_pr_publish refused: could not parse a PR number from '${p.pr}'.`)
+        const linkCtx: PrLinkContext = { owner, repo, pr: prNum }
+        const expanded = expandFilePlaceholders(p.body, linkCtx)
+        if (hasFilePlaceholders(expanded)) {
+          return fail("se_pr_publish refused: a {{file:...}} placeholder is malformed (missing closing braces).")
+        }
+        const violations = validatePrBody(expanded, opts)
+        if (violations.length > 0) return fail(renderPrViolations(violations))
+        if (p.dryRun) {
+          return {
+            content: [{ type: "text", text: `Dry run OK. Expanded body (${expanded.length} chars) passes the contract for PR #${prNum}.` }],
+            details: { mode, pr: prNum, expanded },
+          }
+        }
+        const bodyFile = writeTempBody(expanded)
+        try {
+          const args = ["pr", "edit", String(prNum), "--body-file", bodyFile]
+          if (p.title) args.push("--title", p.title)
+          execSync(`gh ${args.map(a => JSON.stringify(a)).join(" ")}`, { cwd, stdio: "pipe" })
+        } catch (e) {
+          return fail(`se_pr_publish: gh pr edit failed:\n${ghErr(e)}`)
+        }
+        return { content: [{ type: "text", text: `Updated PR #${prNum} (contract OK).` }], details: { mode, pr: prNum } }
+      }
+
+      // CREATE: validate structure on the raw body first and refuse before
+      // creating anything. Anchor links arrive via {{file:}} placeholders,
+      // which the tool computes after the PR number exists, so they are
+      // always correct and need no pre-create check.
+      const preViolations = validatePrBody(p.body, opts)
+      if (preViolations.length > 0) return fail(renderPrViolations(preViolations))
+      if (p.dryRun) {
+        return {
+          content: [{ type: "text", text: "Dry run OK. Body passes the structural contract; anchors will be computed on create." }],
+          details: { mode },
+        }
+      }
+
+      const usesPlaceholders = hasFilePlaceholders(p.body)
+      const interimBody = usesPlaceholders ? "PR body is being generated by se_pr_publish." : p.body
+      const bodyFile = writeTempBody(interimBody)
+      let url = ""
+      try {
+        url = execSync(`gh pr create --title ${JSON.stringify(p.title as string)} --body-file ${JSON.stringify(bodyFile)}`, {
+          cwd,
+          stdio: ["ignore", "pipe", "pipe"],
+        })
+          .toString()
+          .trim()
+      } catch (e) {
+        return fail(`se_pr_publish: gh pr create failed:\n${ghErr(e)}`)
+      }
+      if (!usesPlaceholders) {
+        return { content: [{ type: "text", text: `Created PR (contract OK): ${url}` }], details: { mode, url } }
+      }
+
+      const prNum = parsePr(url)
+      if (!prNum) {
+        return fail(`se_pr_publish: PR created at ${url} but could not parse its number to expand {{file:}} links. Re-run with mode=edit and pr=<number>.`)
+      }
+      const linkCtx: PrLinkContext = { owner, repo, pr: prNum }
+      const expanded = expandFilePlaceholders(p.body, linkCtx)
+      const postViolations = validatePrBody(expanded, opts)
+      if (postViolations.length > 0) {
+        return fail(`se_pr_publish: PR created at ${url} but the expanded body failed the contract:\n${renderPrViolations(postViolations)}\nFix and re-run with mode=edit pr=${prNum}.`)
+      }
+      const expandedFile = writeTempBody(expanded)
+      try {
+        execSync(`gh pr edit ${prNum} --body-file ${JSON.stringify(expandedFile)}`, { cwd, stdio: "pipe" })
+      } catch (e) {
+        return fail(`se_pr_publish: PR created at ${url} but applying the expanded body failed:\n${ghErr(e)}\nRe-run with mode=edit pr=${prNum}.`)
+      }
+      return { content: [{ type: "text", text: `Created PR with contract-validated body: ${url}` }], details: { mode, url, pr: prNum } }
+    },
+  })
+
+  // -- gh pr body gate ------------------------------------------------------
+  // Default-on (--se-pr-gate). Blocks raw `gh pr create` and
+  // `gh pr edit ... --body*` in bash so PR bodies go through se_pr_publish,
+  // which validates the contract and computes correct diff anchors. Other
+  // gh pr operations (review, merge, label-only edits) pass through.
+  pi.on("tool_call", async event => {
+    if (event.toolName !== "bash") return
+    if (pi.getFlag("se-pr-gate") === false) return
+    const command = (event.input as { command?: string }).command ?? ""
+    if (!/\bgh\s+pr\s+create\b/.test(command) && !(/\bgh\s+pr\s+edit\b/.test(command) && /--body(-file)?\b/.test(command))) {
+      return
+    }
+    return {
+      block: true,
+      reason:
+        "se-pr-gate: route PR bodies through the se_pr_publish tool, which validates the SE PR-description contract (risk line, badge, thematic breaks, monitoring) and computes correct diff anchors from {{file:<path>}} placeholders. Pass --se-pr-gate=false to allow raw gh for this session.",
+    }
+  })
+
   // -- no-edits-before-repro gate ------------------------------------------
   // Active when --se-debug-strict is set. Defers to a doc-path bypass and
   // checks for any se:repro entry in the current session log.
@@ -1092,6 +1299,27 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     ])
     if (mutatingTools.has(event.toolName)) refreshSEWidget(ctx)
   })
+}
+
+/** Write a PR body to a private temp file and return its path. */
+function writeTempBody(body: string): string {
+  const dir = mkdtempSync(resolve(tmpdir(), "se-pr-body-"))
+  const file = resolve(dir, "body.md")
+  writeFileSync(file, body, "utf8")
+  return file
+}
+
+/** Best-effort extraction of a child-process failure message. */
+function ghErr(e: unknown): string {
+  const err = e as { stderr?: Buffer; stdout?: Buffer; message?: string }
+  return (err.stderr ?? err.stdout ?? Buffer.from(err.message ?? "")).toString().trim()
+}
+
+/** Render contract violations into a refusal message for se_pr_publish. */
+function renderPrViolations(violations: PrBodyViolation[]): string {
+  const body = violations.map(v => `  • [${v.rule}] ${v.message}`).join("\n")
+  const count = `${violations.length} issue${violations.length === 1 ? "" : "s"}`
+  return `se_pr_publish refused: the PR body violates the SE PR-description contract (${count}).\n${body}\n\nFix the body and call se_pr_publish again. See skills/se-work/references/pr-description-writing.md.`
 }
 
 /**
