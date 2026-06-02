@@ -77,7 +77,7 @@ Determine how to proceed based on what was provided in `<input_document>`.
 
 2. **Setup Environment**
 
-   **Pi-native state read.** If the `se_read_state` tool is registered (provided by `extensions/software-engineering.ts`), call it once before doing any environment detection. It returns the current SE phase, worktree binding, last test colour, open review residuals, and active backlog — read from the session log, surviving `/compact`, `/fork`, and restart. Use the returned phase to decide whether to resume mid-flow rather than re-running Phase 0 triage. If the tool is not registered, fall through to the git-based detection below.
+   **Pi-native state read.** If the `se_read_state` tool is registered (provided by `extensions/software-engineering.ts`), call it once before doing any environment detection. It returns the current SE phase, worktree binding, last test colour, open review residuals, and active backlog — read from the session log, surviving `/compact`, `/fork`, and restart. Use the returned phase to decide whether to resume mid-flow rather than re-running Phase 0 triage. If the work is tied to an active/promoted backlog item, remember its id so Phase 4 can close it with `backlog_remove` after local integration succeeds. If the tool is not registered, fall through to the git-based detection below.
 
    First, check the current branch:
 
@@ -405,6 +405,7 @@ When all Phase 2 tasks are complete and execution transitions to quality check, 
 - After local tests/type checks are green, local fast-forward or rebase integration back to the main branch is allowed
 - Never use classic merge commits
 - Clean up local worktrees after integration when they were used
+- Close the source backlog item when backlog-promoted work is locally integrated and verified
 - Don't leave features 80% done
 - A finished feature that ships beats a perfect feature that doesn't
 
@@ -418,6 +419,7 @@ When all Phase 2 tasks are complete and execution transitions to quality check, 
 - **Publishing by default** - Do not push or open a PR unless the developer explicitly asks
 - **Classic merge commits** - Use local fast-forward/rebase or GitHub rebase when explicitly publishing; never create classic merge commits
 - **Leaking worktrees** - Remove completed worktrees once the work is done
+- **Leaving completed backlog open** - If work came from a backlog item, remove/close that exact item after verification and local integration
 - **Mixed-purpose commits** - Do not combine unrelated behavior, cleanup, formatting, and drive-by fixes because they happened in the same session
 - **Losing follow-ups** - If a worthwhile follow-up is out of scope, capture it with `se-backlog` rather than relying on chat memory
 - **Using `git add .` reflexively** - Inspect and stage only the files or hunks that belong to the atomic slice

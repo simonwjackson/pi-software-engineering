@@ -132,7 +132,18 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    - The Post-Deploy Monitoring & Validation notes (see Phase 3 Step 6)
    - Any "Known Residuals" accepted in the Phase 3 Residual Work Gate, rendered as a dedicated section in the PR body with severity, file:line, and title per finding
 
-6. **Optional PR Publication Addendum**
+6. **Close Completed Backlog Item**
+
+   If this work was promoted from a backlog item, close it once local integration is complete and verification is green. Use the Pi backlog tool when available:
+
+   ```text
+   tool: backlog_remove
+   inputs: { id: <task-id>, reason: "Completed and locally integrated in <commit-or-branch>" }
+   ```
+
+   If the tool is unavailable, delete the matching `backlog/<task-id> - <slug>.md` file in the same atomic commit as the final workflow cleanup and mention the removal in the final summary. Do not remove unrelated backlog items. If the completed work produced durable lessons, first capture them with `se-compound`; the backlog item is not the long-term record.
+
+7. **Optional PR Publication Addendum**
 
    Run this only when the developer explicitly asked to push/open/update a PR. After the PR exists, poll GitHub until the PR is ready, blocked, or the session times out. Watch both review approval and GitHub Actions/status checks; approval alone is not enough.
 
@@ -152,9 +163,9 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
 
    Merge only when the developer explicitly asked for merge/auto-merge. Use GitHub rebase/auto-rebase; never use classic merge commits.
 
-7. **Clean Up Worktree**
+8. **Clean Up Worktree**
 
-   After local integration is complete, or after an explicitly requested PR is merged/closed, clean up the local worktree when one was used and no more local changes are needed. Do not remove a worktree that still contains uncommitted or unpushed changes.
+   After local integration is complete, any completed backlog item is closed, and no more local changes are needed, clean up the local worktree when one was used. For explicitly requested PR publication, cleanup may wait until the PR is merged/closed. Do not remove a worktree that still contains uncommitted or unpushed changes.
 
    ```bash
    git status --short
@@ -166,7 +177,7 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
 
    If cleanup fails, report the exact reason and the path that needs manual cleanup. Do not force-delete (`-D` or `--force`) unless the user explicitly confirms after seeing the unmerged/uncommitted state.
 
-8. **Plain-English Completion Summary**
+9. **Plain-English Completion Summary**
 
    Finish with progressive disclosure:
 
@@ -175,7 +186,7 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    3. **Integration status** — current branch/main status, commit hashes, and whether anything was pushed (normally: not pushed).
    4. **Issues encountered** — surface problems hit along the way and how they were solved. If none, say so.
    5. **Significant code changes** — show only high-level snippets, type/interface shapes, or function signatures that are important to understand the work. Avoid dumping large diffs.
-   6. **Follow-ups / residuals** — backlog items, known residuals, or "none".
+   6. **Backlog / follow-ups / residuals** — completed backlog item closed, new backlog items captured, known residuals, or "none".
 
 ## Quality Checklist
 
@@ -192,8 +203,9 @@ Before finishing locally or publishing, verify:
 - [ ] Code review completed (Tier 1 harness-native or Tier 2 `se-code-review`)
 - [ ] Local integration is complete via current-branch commits, fast-forward, or rebase; no classic merge commit
 - [ ] Nothing was pushed and no PR was opened unless explicitly requested
+- [ ] Completed source backlog item is removed/closed when this work came from backlog
 - [ ] Local worktree cleanup is complete when appropriate, or explicitly deferred
-- [ ] Final summary uses progressive disclosure and includes verification, issues/resolutions, and significant snippets/types
+- [ ] Final summary uses progressive disclosure and includes verification, backlog closure status, issues/resolutions, and significant snippets/types
 
 ## Code Review Tiers
 
