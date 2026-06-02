@@ -25,10 +25,11 @@ Before entering the implementation workflow, classify the user's intent from `<i
 |--------|---------|-------|
 | **Implementation** | plan path, spec path, feature/fix/refactor request, or bare prompt describing code/doc work | Run the Execution Workflow below. Preserve ATDD/TDD defaults and atomic commit discipline throughout implementation. |
 | **Commit-only** | "commit", "save my changes", "create a commit", or explicit local-only commit request | Read `references/commit-pr-workflow.md` and run its Commit-only workflow. Do not run Phase 0-2 implementation unless the user also asked for code changes. |
-| **Ship / PR** | "ship this", "open a PR", "commit and PR", "push and create PR", or a completed implementation ready for publication | Run Phase 3-4 if quality checks have not already run, then read `references/commit-pr-workflow.md` for the final commit/push/PR mechanics. |
+| **Finish locally** | completed implementation, "finish this", "ship this" without explicit push/PR wording | Run Phase 3-4: local quality checks, atomic commits, optional local fast-forward/rebase integration back to the main branch, then a plain-English summary. Do not push or open a PR. |
+| **Publish / PR** | explicit "push", "open a PR", "commit and PR", "push and create PR", or "publish" | Run Phase 3-4 quality checks first, then read `references/commit-pr-workflow.md` for the explicit push/PR mechanics. |
 | **PR description** | "write/draft/update/refresh PR description", "describe this PR", or a PR URL/number with description intent | Read `references/commit-pr-workflow.md` and run its Description-only or Description update workflow. Do not mutate git state unless the user explicitly asks. |
 
-When intent is mixed, prefer the fuller lifecycle: implementation before commit, quality checks before PR, PR monitoring after PR creation. Do not collapse `/se-work` into an end-of-session commit tool; its core shape is still test-first vertical slices with atomic commits as slices turn green.
+When intent is mixed, prefer the fuller local lifecycle: implementation before commit, local quality checks before integration, and PR/push only when explicitly requested. Do not collapse `/se-work` into an end-of-session commit tool; its core shape is still test-first vertical slices with atomic commits as slices turn green.
 
 ## Execution Workflow
 
@@ -175,10 +176,10 @@ Determine how to proceed based on what was provided in `<input_document>`.
    **After all parallel subagents in a batch complete (worktree-isolated mode):**
    1. Wait for every subagent in the current parallel batch to finish.
    2. For each completed subagent, in dependency order: review the worktree's diff against the orchestrator's branch and check that any subagent commits are atomic. If the subagent did not commit its own work, stage and commit atomic slices inside that worktree.
-   3. Merge each subagent's branch into the orchestrator's branch sequentially in dependency order. **If a merge conflict surfaces, abort the merge (`git merge --abort`) and re-dispatch the conflicting unit serially against the now-merged tree** — hand-resolving silently picks a side and discards one unit's intent. (Predicted overlap from the Parallel Safety Check surfaces here as a conflict, not as silent data loss in shared-directory mode.)
-   4. After each merge, run the relevant test suite. If tests fail, diagnose and fix before merging the next branch.
-   5. Update the task list (progress is carried by the merge commits).
-   6. After merging, remove each subagent's worktree and delete its branch. Use the absolute path and branch name returned in the subagent's result.
+   3. Integrate each subagent's branch into the orchestrator's branch sequentially in dependency order using rebase/fast-forward; do not create classic merge commits. **If a conflict surfaces, abort the integration and re-dispatch the conflicting unit serially against the now-integrated tree** — hand-resolving silently picks a side and discards one unit's intent. (Predicted overlap from the Parallel Safety Check surfaces here as a conflict, not as silent data loss in shared-directory mode.)
+   4. After each integration, run the relevant test suite. If tests fail, diagnose and fix before integrating the next branch.
+   5. Update the task list (progress is carried by the integrated commits).
+   6. After integrating, remove each subagent's worktree and delete its branch. Use the absolute path and branch name returned in the subagent's result.
       - Unlock the worktree first — the harness locks per-subagent worktrees: `git worktree unlock <absolute-path>`
       - Remove the worktree: `git worktree remove <absolute-path>`
       - Delete the branch: `git branch -d <branch-name>` (the branch outlives the worktree by default and accumulates as orphans if not cleaned up; `-d` lowercase refuses to delete unmerged branches, which is the safety we want — if it fails, investigate before forcing)
@@ -188,7 +189,7 @@ Determine how to proceed based on what was provided in `<input_document>`.
    1. Wait for every subagent in the current parallel batch to finish before acting on any of their results
    2. Cross-check for discovered file collisions: compare the actual files modified by all subagents in the batch (not just their declared `Files:` lists). Subagents may create or modify files not anticipated during planning — this is expected, since plans describe *what* not *how*. A collision only matters when 2+ subagents in the same batch modified the same file. In a shared working directory, only the last writer's version survives — the other unit's changes to that file are lost. If a collision is detected: commit all non-colliding files from all units first, then re-run the affected units serially for the shared file so each builds on the other's committed work
    3. For each completed unit, in dependency order: review the diff, split mixed concerns when needed, run the relevant test suite, stage only one atomic slice at a time, and commit with a conventional message derived from that slice's purpose
-   4. If tests fail while preparing a slice, diagnose and fix before committing it; if a post-commit verification failure appears, fix it before committing or merging the next slice
+   4. If tests fail while preparing a slice, diagnose and fix before committing it; if a post-commit verification failure appears, fix it before committing or integrating the next slice
    5. Update the task list (do not edit the plan body — progress is carried by the commits just made)
    6. Dispatch the next batch of independent units, or the next dependent unit
 
@@ -317,10 +318,10 @@ Determine how to proceed based on what was provided in `<input_document>`.
 
    **Handling merge conflicts:** If conflicts arise during rebasing or merging, resolve them immediately. Atomic commits make conflict resolution easier because each commit has a single intent.
 
-   **Note:** Atomic commits use clean conventional messages without attribution footers. The final Phase 4 commit/PR includes the full attribution.
+   **Note:** Atomic commits use clean conventional messages without attribution footers. The final Phase 4 summary carries the session attribution/context; explicit PR publication may also include it in the PR body.
 
    **Parallel subagent mode:** Commit ownership is split by isolation mode (see Phase 1 Step 4):
-   - **Worktree-isolated:** subagents may stage and commit atomic slices inside their own worktree branch; the orchestrator reviews each commit for single-purpose scope before merging those branches in dependency order after the batch.
+   - **Worktree-isolated:** subagents may stage and commit atomic slices inside their own worktree branch; the orchestrator reviews each commit for single-purpose scope before integrating those branches in dependency order after the batch.
    - **Shared-directory fallback:** subagents do not commit; the orchestrator stages and commits each atomic slice after the entire parallel batch completes.
 
 3. **Follow Existing Patterns**
@@ -392,18 +393,18 @@ When all Phase 2 tasks are complete and execution transitions to quality check, 
 
 - Follow existing patterns
 - Write tests for new code
-- Run linting before pushing
+- Run local tests, type/static checks, formatter, and lint before considering work complete
 - Commit only atomic, working slices that are reviewable and revertable on their own
-- Work in a dedicated worktree by default; keep the main checkout clean
+- Work in the current checkout or a dedicated worktree; do not create/switch traditional branches without explicit developer direction
 - Review every change — inline for simple additive work, full review for everything else
 
 ### Ship Complete Features
 
 - Mark all tasks completed before moving on
-- Push/create a PR only when the current checkout already represents PR work or the developer explicitly asks
-- Poll PR approval and GitHub Actions/status checks; fix failures before merging
-- Merge with GitHub rebase/auto-rebase only — never classic merge commits
-- Clean up local worktrees after merge/close when they were used
+- Do not push or open a PR unless the developer explicitly asks
+- After local tests/type checks are green, local fast-forward or rebase integration back to the main branch is allowed
+- Never use classic merge commits
+- Clean up local worktrees after integration when they were used
 - Don't leave features 80% done
 - A finished feature that ships beats a perfect feature that doesn't
 
@@ -414,8 +415,8 @@ When all Phase 2 tasks are complete and execution transitions to quality check, 
 - **Ignoring plan references** - The plan has links for a reason
 - **Testing at the end** - Test continuously or suffer later
 - **Unrequested branch setup** - Work in the current checkout or a dedicated worktree; do not create/switch traditional branches unless the developer explicitly asks
-- **Stopping at PR creation** - Show the PR, then monitor approval and checks instead of disappearing after `gh pr create`
-- **Classic merge commits** - Use rebase merge or auto-rebase; stop if the repository only allows classic merge
+- **Publishing by default** - Do not push or open a PR unless the developer explicitly asks
+- **Classic merge commits** - Use local fast-forward/rebase or GitHub rebase when explicitly publishing; never create classic merge commits
 - **Leaking worktrees** - Remove completed worktrees once the work is done
 - **Mixed-purpose commits** - Do not combine unrelated behavior, cleanup, formatting, and drive-by fixes because they happened in the same session
 - **Losing follow-ups** - If a worthwhile follow-up is out of scope, capture it with `se-backlog` rather than relying on chat memory

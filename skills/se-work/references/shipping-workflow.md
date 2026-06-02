@@ -4,17 +4,21 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
 
 ## Phase 3: Quality Check
 
-1. **Run Core Quality Checks**
+1. **Run Core Local Quality Checks**
 
-   Always run before submitting:
+   Always run locally before finishing or integrating:
 
    ```bash
    # Run full test suite (use project's test command)
    # Examples: bin/rails test, npm test, pytest, go test, etc.
 
-   # Run linting (per AGENTS.md)
-   # Use linting-agent before pushing to origin
+   # Run typechecker / static analyzer when the project has one
+   # Examples: npm run typecheck, tsc --noEmit, mypy, cargo check, go test ./...
+
+   # Run formatter and linting per AGENTS.md / project docs
    ```
+
+   If any test, type/static check, formatter, or linter fails, fix it before proceeding. Do not publish, integrate, or call the work complete with known local failures.
 
 2. **Simplify** (Claude Code only; REQUIRED for >=30 changed lines)
 
@@ -67,17 +71,12 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    - If the plan has a `Requirements` section (or legacy `Requirements Trace`), verify each requirement is satisfied by the completed work
    - If any `Deferred to Implementation` questions were noted, confirm they were resolved during execution
 
-6. **Prepare Operational Validation Plan** (REQUIRED)
-   - Add a `## Post-Deploy Monitoring & Validation` section to the PR description for every change.
-   - Include concrete:
-     - Log queries/search terms
-     - Metrics or dashboards to watch
-     - Expected healthy signals
-     - Failure signals and rollback/mitigation trigger
-     - Validation window and owner
-   - If there is truly no production/runtime impact, still include the section with: `No additional operational monitoring required` and a one-line reason.
+6. **Prepare Operational Validation Notes** (when useful)
+   - If the change has production/runtime impact, capture concise validation notes for the final summary: metrics/logs to watch, expected healthy signal, failure signal, and rollback/mitigation trigger.
+   - If the developer explicitly asked for a PR, these notes become the PR description's `## Post-Deploy Monitoring & Validation` section.
+   - If there is truly no production/runtime impact, say so in the final summary.
 
-## Phase 4: Ship It
+## Phase 4: Finish It
 
 1. **Prepare Evidence Context**
 
@@ -92,27 +91,50 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    status: active  ->  status: completed
    ```
 
-3. **Commit, Push, and Create Pull Request**
+3. **Commit Remaining Atomic Slices**
 
-   Read `references/commit-pr-workflow.md` to handle any remaining atomic commits, pushing, and PR creation. Creating or updating a PR is the default shipping path for `/se-work`; only skip the PR when the user explicitly asks not to publish one. Do not use the local-only commit path unless the user explicitly requests it.
+   Create any remaining local atomic commits using the commit-only path in `references/commit-pr-workflow.md`. Do not push or open a PR unless the developer explicitly requested publication.
 
-   When providing context for the PR description, include:
+   Include only coherent, verified slices. If the work already produced atomic commits during Phase 2, commit only remaining plan-status, residual-doc, or final polish slices.
+
+4. **Local Fast-Forward / Rebase Integration**
+
+   After all local quality checks are green and commits are atomic, the agent is free to integrate local work back into the main branch with a fast-forward or rebase flow. Do not push unless explicitly asked.
+
+   - If already on the main/default branch: no integration step is needed; report that work is complete on the current branch.
+   - If in a worktree or non-default work branch: rebase the work onto the current local main/default branch if needed, then fast-forward main/default to the completed work.
+   - If rebase conflicts occur: stop, surface the conflicting files, explain the attempted integration path, and ask for direction. Do not hand-resolve ambiguous conflicts silently.
+   - Never create a classic merge commit.
+
+   Example shape (adapt to the repo's default branch and worktree paths):
+
+   ```bash
+   default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+   default_branch=${default_branch:-main}
+   work_branch=$(git branch --show-current)
+
+   git rebase "$default_branch"        # in the work checkout, only when needed
+   cd <main-checkout>
+   git merge --ff-only "$work_branch"  # fast-forward local main/default
+   ```
+
+   If the repository uses trunk style and the work was done directly on the default branch, the successful local commits are the integration.
+
+5. **Publish Only When Explicitly Requested**
+
+   If the developer explicitly asked to push, open/update a PR, or publish, read `references/commit-pr-workflow.md` and run its Publish / PR workflow. Otherwise skip GitHub publication entirely.
+
+   When providing context for an explicit PR description, include:
    - The plan's summary and key decisions
    - Testing notes (tests added/modified, manual testing performed)
    - Evidence context from step 1, so the commit/PR workflow can decide whether to ask about capturing evidence
    - Figma design link (if applicable)
-   - The Post-Deploy Monitoring & Validation section (see Phase 3 Step 6)
+   - The Post-Deploy Monitoring & Validation notes (see Phase 3 Step 6)
    - Any "Known Residuals" accepted in the Phase 3 Residual Work Gate, rendered as a dedicated section in the PR body with severity, file:line, and title per finding
 
-   After creation/update, show the PR to the user by reporting the URL. If the harness can safely open a browser, also run:
+6. **Optional PR Publication Addendum**
 
-   ```bash
-   gh pr view --web
-   ```
-
-4. **Monitor Pull Request Gates**
-
-   After the PR exists, poll GitHub until the PR is ready to merge, blocked, or the session times out. Watch both review approval and GitHub Actions/status checks; approval alone is not enough.
+   Run this only when the developer explicitly asked to push/open/update a PR. After the PR exists, poll GitHub until the PR is ready, blocked, or the session times out. Watch both review approval and GitHub Actions/status checks; approval alone is not enough.
 
    Prefer the Pi PR supervisor extension when available:
 
@@ -121,65 +143,18 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    inputs: { pr: <number-or-url>, mergeWhenReady: false }
    ```
 
-   It gates on review approval, status-check rollup, and mergeability. If the PR supervisor tool is unavailable, use the GitHub CLI/API from the worktree:
+   If the PR supervisor tool is unavailable, use the GitHub CLI/API from the worktree:
 
    ```bash
    gh pr view --json url,number,reviewDecision,mergeStateStatus,statusCheckRollup,headRefName,baseRefName
    gh pr checks --watch --interval 30
    ```
 
-   If individual Actions runs fail and the harness provides `github_actions_supervise`, use it for the failed run IDs to summarize failed jobs/steps before returning to implementation.
+   Merge only when the developer explicitly asked for merge/auto-merge. Use GitHub rebase/auto-rebase; never use classic merge commits.
 
-   Gate states:
-   - **Ready**: `reviewDecision` is `APPROVED`, required checks/actions are successful, and GitHub reports the PR mergeable or clean enough for the chosen merge strategy.
-   - **Needs changes**: a review requests changes, checks fail, or Actions fail. Fix in the same worktree, add atomic follow-up commits, push, and resume polling.
-   - **Waiting**: reviews or checks are still pending. Keep the PR URL visible and continue polling when the user asks, or stop with a clear pending status if the session should end.
+7. **Clean Up Worktree**
 
-5. **Merge Approved Pull Request**
-
-   Default merge strategy is rebase through GitHub. Prefer the Pi PR supervisor extension when available:
-
-   ```text
-   tool: github_pr_supervise
-   inputs: { pr: <number-or-url>, mergeWhenReady: true, enableAutoMerge: true, cleanupWorktree: false }
-   ```
-
-   If the PR supervisor tool is unavailable, use GitHub CLI:
-
-   ```bash
-   gh pr merge --rebase --delete-branch
-   ```
-
-   Never use classic merge commits for `/se-work` shipping. Rebase merge preserves the atomic commit stack without adding a noisy merge commit and respects GitHub branch protection. If the repository has auto-merge enabled and checks/reviews are still pending, prefer:
-
-   ```bash
-   gh pr merge --auto --rebase --delete-branch
-   ```
-
-   Use a local fast-forward merge only when the developer explicitly requests this traditional branch operation and branch protection permits direct pushes:
-
-   ```bash
-   git fetch origin
-   git switch <base-branch>
-   git merge --ff-only <feature-branch>
-   git push origin <base-branch>
-   git push origin --delete <feature-branch>
-   ```
-
-   If rebase merge is unavailable because repository settings disallow it, stop and report the repository configuration issue instead of falling back to a classic merge commit.
-
-6. **Clean Up Worktree**
-
-   After the PR is merged, closed as unneeded, or the user explicitly says the work is done and no more local changes are needed, clean up the local worktree when one was used. Do not remove a worktree that still contains uncommitted or unpushed changes.
-
-   Prefer the Pi PR supervisor extension when it is available and no further local commands need to run from the worktree:
-
-   ```text
-   tool: github_pr_supervise
-   inputs: { pr: <number-or-url>, cleanupWorktree: true }
-   ```
-
-   Otherwise, clean up from outside the worktree:
+   After local integration is complete, or after an explicitly requested PR is merged/closed, clean up the local worktree when one was used and no more local changes are needed. Do not remove a worktree that still contains uncommitted or unpushed changes.
 
    ```bash
    git status --short
@@ -191,33 +166,34 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
 
    If cleanup fails, report the exact reason and the path that needs manual cleanup. Do not force-delete (`-D` or `--force`) unless the user explicitly confirms after seeing the unmerged/uncommitted state.
 
-7. **Notify User**
-   - Summarize what was completed
-   - Link to the PR
-   - State whether it was merged, auto-merge was enabled, or it is waiting on review/checks
-   - Confirm whether any local worktree was cleaned up
-   - Note any follow-up work needed
-   - Suggest next steps if applicable
+8. **Plain-English Completion Summary**
+
+   Finish with progressive disclosure:
+
+   1. **TL;DR** — one short paragraph or 3 bullets naming what changed and whether it is integrated locally.
+   2. **Verification** — exact local tests/typechecks/lint/format commands run and their pass/fail status.
+   3. **Integration status** — current branch/main status, commit hashes, and whether anything was pushed (normally: not pushed).
+   4. **Issues encountered** — surface problems hit along the way and how they were solved. If none, say so.
+   5. **Significant code changes** — show only high-level snippets, type/interface shapes, or function signatures that are important to understand the work. Avoid dumping large diffs.
+   6. **Follow-ups / residuals** — backlog items, known residuals, or "none".
 
 ## Quality Checklist
 
-Before creating PR, verify:
+Before finishing locally or publishing, verify:
 
 - [ ] All clarifying questions asked and answered
 - [ ] All tasks marked completed
-- [ ] Testing addressed -- tests pass AND new/changed behavior has corresponding test coverage (or an explicit justification for why tests are not needed)
-- [ ] Linting passes (use linting-agent)
+- [ ] Testing addressed -- local tests pass AND new/changed behavior has corresponding test coverage (or an explicit justification for why tests are not needed)
+- [ ] Typechecker/static analyzer passes when the project has one
+- [ ] Formatter and linting pass
 - [ ] Code follows existing patterns
 - [ ] Figma designs match implementation (if applicable)
-- [ ] Evidence decision handled by `references/commit-pr-workflow.md` when the change has observable behavior
 - [ ] Commit messages follow conventional format
-- [ ] PR description includes Post-Deploy Monitoring & Validation section (or explicit no-impact rationale)
 - [ ] Code review completed (Tier 1 harness-native or Tier 2 `se-code-review`)
-- [ ] PR description includes summary, testing notes, and evidence when captured
-- [ ] PR description includes Software Engineered badge with accurate model and harness
-- [ ] PR approval and GitHub Actions/status checks have been polled and reported
-- [ ] Merge strategy is rebase/auto-rebase, never classic merge
-- [ ] Local worktree cleanup is complete after merge/close, or explicitly deferred because the PR is still waiting
+- [ ] Local integration is complete via current-branch commits, fast-forward, or rebase; no classic merge commit
+- [ ] Nothing was pushed and no PR was opened unless explicitly requested
+- [ ] Local worktree cleanup is complete when appropriate, or explicitly deferred
+- [ ] Final summary uses progressive disclosure and includes verification, issues/resolutions, and significant snippets/types
 
 ## Code Review Tiers
 

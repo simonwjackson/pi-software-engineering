@@ -596,12 +596,12 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     type: "string",
   })
   pi.registerFlag("se-skip-worktree", {
-    description: "Skip the default worktree isolation step in /se-work. Use only for read-only investigations.",
+    description: "Force /se-work to avoid worktree isolation and stay in the current checkout.",
     type: "boolean",
     default: false,
   })
   pi.registerFlag("se-no-pr", {
-    description: "After /se-work completes, do not open a PR — commit and stop. Mirrors 'no PRs, just commit' intent.",
+    description: "Compatibility flag: /se-work does not open PRs unless explicitly asked; this keeps older invocations local-only.",
     type: "boolean",
     default: false,
   })

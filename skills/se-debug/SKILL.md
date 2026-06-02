@@ -232,9 +232,10 @@ Use the platform's blocking question tool (`AskUserQuestion` in Claude Code, `re
 
 Options:
 
-1. **Commit and open a PR (`/se-work` ship/PR intent)** — default for most cases
+1. **Finish locally (`/se-work` finish intent)** — run local checks, commit, and locally integrate if appropriate
 2. **Commit the fix (`/se-work` commit-only intent)** — local commit only
-3. **Stop here** — user takes it from there
+3. **Publish a PR (`/se-work` explicit Publish / PR intent)** — push/open PR only because the user selected it
+4. **Stop here** — user takes it from there
 
 #### After a PR is open (either path): consider follow-up capture
 

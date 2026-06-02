@@ -18,7 +18,7 @@ Determine which commits and diff the description should cover. Run this first; S
 
 ### Mode
 
-- **Current-branch mode.** Describe HEAD vs the repo's default base. Used when the caller has no explicit PR reference (the Ship / PR workflow in `commit-pr-workflow.md`, or description-only mode without a PR ref).
+- **Current-branch mode.** Describe HEAD vs the repo's default base. Used when the caller has no explicit PR reference (the explicit Publish / PR workflow in `commit-pr-workflow.md`, or description-only mode without a PR ref).
 - **PR mode.** Describe a specific PR's commit range. Used by DU-3 (the existing PR on the current branch) and description-only mode (the user pasted a PR URL/number). The PR ref may be a bare number, `#NN`, `pr:NN`, or a full URL — the caller passes it to `gh pr view <ref>` directly. (`gh pr view` accepts numbers and URLs natively; `#NN` and `pr:NN` need the `#` or `pr:` stripped before passing.)
 
 ### Resolve PR metadata (PR mode and current-branch-with-existing-PR)

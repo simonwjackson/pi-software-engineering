@@ -847,8 +847,8 @@ Common outcomes:
   - **Push fixes** -- push commits to the existing PR branch
   - **Exit** -- done for now
 - **Current checkout mode (no PR, and not the resolved review base/default branch):**
-  - **Create a PR (Recommended)** -- push and open a pull request
-  - **Continue without PR** -- stay on the branch
+  - **Finish locally** -- keep the work local; do not push or open a PR
+  - **Create a PR** -- push and open a pull request only if the developer selects it
   - **Exit** -- done for now
 - **On the resolved review base/default branch:**
   - **Continue** -- proceed with next steps

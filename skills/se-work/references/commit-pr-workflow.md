@@ -1,6 +1,6 @@
-# Commit, Push, and Pull Request Workflow
+# Commit and Explicit Publish Workflow
 
-This reference is loaded by `se-work` when the user's intent is to commit, ship, open/update a pull request, or draft/update a PR description. It is also loaded from the Phase 4 shipping workflow after implementation, quality checks, and review are complete.
+This reference is loaded by `se-work` when the user's intent is to commit, explicitly push/open/update a pull request, or draft/update a PR description. The default Phase 4 path is local finish/integration; publication uses this workflow only when the developer explicitly asks.
 
 This workflow does **not** replace `se-work`'s execution discipline. The atomic commit rules in `../SKILL.md` remain authoritative: commit only coherent, working, reviewable slices; include the tests/docs/config required for that slice; exclude unrelated cleanup; verify before committing; never hide mixed concerns behind `git add .`.
 
@@ -15,7 +15,7 @@ Select one mode from the user's request and current git state.
 | Mode | Use when | Behavior |
 |---|---|---|
 | **Commit-only** | User says "commit", "save my changes", or explicitly asks for local-only commit | Create atomic commit(s), report hashes, stop. Do not push or create a PR. |
-| **Ship / PR** | User says "ship", "open a PR", "commit and PR", or Phase 4 calls this workflow | Create any remaining atomic commits, push, create/update the PR, then return the PR URL. |
+| **Publish / PR** | User explicitly says "push", "publish", "open a PR", "commit and PR", or "push and create PR" | Create any remaining atomic commits, push, create/update the PR, then return the PR URL. |
 | **Description-only** | User asks only to write/draft/describe a PR | Generate title/body from the PR or branch diff and print it. Do not edit git state unless the user asks. |
 | **Description update** | User asks to update/refresh/rewrite an existing PR description | Find the open PR, compose the replacement body, preview, confirm, then apply with `gh pr edit`. |
 
@@ -57,7 +57,7 @@ Fall back to `main` only if both fail.
    - commit with a message that names the one purpose
 7. Run `git status`, then report commit hash(es) and subject(s).
 
-## Ship / PR workflow
+## Publish / PR workflow
 
 ### 1. Resolve current checkout state
 
@@ -75,8 +75,8 @@ If the working tree is clean:
    ```
 3. Route:
    - current branch with no upstream: ask before pushing; if the developer wants a PR but this is the default/trunk branch, stop unless they explicitly authorize branch creation
-   - current branch with unpushed commits: continue to push only when the user asked to ship/push/PR
-   - current branch all pushed, no open PR: create a PR only when the current branch is already PR-shaped or the developer explicitly asks how to proceed
+   - current branch with unpushed commits: continue to push only because the developer explicitly asked to push/publish/PR
+   - current branch all pushed, no open PR: create a PR only because the developer explicitly asked
    - current branch all pushed, open PR: ask whether to refresh the PR description; otherwise report up to date
 
 ### 2. Never branch implicitly
@@ -87,7 +87,7 @@ Do not run `git checkout -b`, switch the shared checkout to another branch, or m
 
 Use the same commit-only workflow above, with two additions:
 
-- When Phase 4 called this workflow after implementation, most slices should already be committed. Commit only remaining plan-status, residual-doc, or final polish slices.
+- When explicit publication follows Phase 4 implementation, most slices should already be committed. Commit only remaining plan-status, residual-doc, or final polish slices.
 - Keep `se-work`'s atomic boundaries. Do not squash a carefully built TDD/ATDD commit stack into one end-of-session commit.
 
 ### 4. Push

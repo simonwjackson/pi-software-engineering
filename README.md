@@ -118,8 +118,8 @@ erroring.
 | Flag | Effect |
 |---|---|
 | `--se-review-tier=<1\|2>` | Force SE review tier; overrides `/se-work`'s prose-based selection |
-| `--se-skip-worktree` | Skip worktree isolation in `/se-work`. Use only for read-only investigations |
-| `--se-no-pr` | After `/se-work` completes, commit and stop (no PR) |
+| `--se-skip-worktree` | Force `/se-work` to stay in the current checkout instead of using worktree isolation |
+| `--se-no-pr` | Compatibility flag: `/se-work` is local-only by default unless push/PR is explicit |
 
 Flag values are readable via `pi.getFlag(name)` inside the extension and
 through downstream skill prose.
