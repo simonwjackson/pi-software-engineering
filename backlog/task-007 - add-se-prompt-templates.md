@@ -25,10 +25,8 @@ Pi's prompt-template resource (`prompts/` dir, `pi.prompts` in `package.json`) i
 
 Several SE skills have a "common starting shape" the user types out by hand or pastes from memory every time. Templating those buys ergonomic improvement for zero implementation risk.
 
-Candidates from `~/.pi/docs/se-pi-upgrades.md` items #31–#35:
+Candidates from `~/.pi/docs/se-pi-upgrades.md` items #31–#35, minus the dropped brainstorm seed and plan brief templates:
 
-- `/se-plan-brief <topic>` — emit a planning brief skeleton from `$@` so the user can fill in and hand to `se-plan`.
-- `/se-brainstorm-seed <topic>` — kick off `se-brainstorm` with a structured seed instead of a cold prompt.
 - `/se-debug-repro <symptom>` — prompt the LLM to write a repro before fixing (reinforces `se-debug`'s "no edits before diagnosis" principle).
 - `/se-pr-body <pr-title-or-branch>` — emit a PR body skeleton with the SE conventions (Known Residuals, Post-Deploy Monitoring, Software Engineered badge).
 - `/se-residual-ticket <finding>` — turn a residual finding into a tracker-ready issue body with the SE finding format.
@@ -45,10 +43,10 @@ Pi's prompt-template discovery is non-recursive inside `prompts/`, so they all s
 
 ## Acceptance Criteria
 
-- [ ] `prompts/` directory added at the package root with at least the five templates above. Each `.md` file has frontmatter with `description:` and `argument-hint:` per Pi conventions.
+- [ ] `prompts/` directory added at the package root with at least the three templates above. Each `.md` file has frontmatter with `description:` and `argument-hint:` per Pi conventions.
 - [ ] `pi.prompts` in `package.json` includes `./prompts` so the templates ship in the npm tarball.
 - [ ] Each template uses `$@`, `$1`, etc. correctly and degrades gracefully when invoked with no arguments (the template body still makes sense as a generic prompt).
-- [ ] Templates produce skill-compatible prompts — e.g. `/se-plan-brief foo` produces something `se-plan` would accept as its initial brief, not a freeform paragraph the LLM has to reshape.
+- [ ] Templates produce skill-compatible prompts — e.g. `/se-debug-repro foo` produces something `se-debug` would accept as its initial repro brief, not a freeform paragraph the LLM has to reshape.
 - [ ] README documents the templates briefly: invocation form, expected arguments, which downstream skill they pair with.
 - [ ] `npm run check` shows the new prompt files in the tarball, and `pi list` reflects them after a local install.
 
@@ -57,8 +55,6 @@ Pi's prompt-template discovery is non-recursive inside `prompts/`, so they all s
 - `prompts/` (new)
 - `package.json` (`pi.prompts`)
 - `README.md`
-- `skills/se-plan/SKILL.md` (downstream of `/se-plan-brief`)
-- `skills/se-brainstorm/SKILL.md` (downstream of `/se-brainstorm-seed`)
 - `skills/se-debug/SKILL.md` (downstream of `/se-debug-repro`)
 - `skills/se-work/references/pr-description-writing.md` (input shape for `/se-pr-body`)
 - `skills/se-code-review/references/` (input shape for `/se-residual-ticket`)
@@ -69,4 +65,4 @@ Pi's prompt-template discovery is non-recursive inside `prompts/`, so they all s
 
 Don't over-design these. Each template should be a minimal skeleton, not a wizard. If a template grows past ~30 lines, it's probably trying to be a skill — promote it to one instead of bloating the template.
 
-If during implementation the user hasn't actually wanted any of these in practice, ship only the ones that match real friction. Five was the suggested set, not the required set.
+If during implementation the user hasn't actually wanted any of these in practice, ship only the ones that match real friction. The listed set was suggested, not required.

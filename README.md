@@ -137,17 +137,15 @@ Select it via `/settings` or `"theme": "se-review"` in `~/.pi/agent/settings.jso
 
 ### Prompt templates
 
-Five `/se-*` prompt templates ship under `prompts/`:
+Three `/se-*` prompt templates ship under `prompts/`:
 
 | Template | Pairs with | Purpose |
 |---|---|---|
-| `/se-plan-brief <topic>` | `se-plan` | Planning brief skeleton ready to hand to /se-plan |
-| `/se-brainstorm-seed <topic>` | `se-brainstorm` | Structured seed for ideation |
 | `/se-debug-repro <symptom>` | `se-debug` | Reinforces no-edits-before-diagnosis; cues the `se_capture_repro` tool |
 | `/se-pr-body <pr-title-or-branch>` | `se-work` shipping | PR body skeleton with SE conventions |
 | `/se-residual-ticket <finding>` | `se-code-review`, `se-doc-review` | Turn a residual finding into a tracker-ready issue body |
 
-All five accept an optional argument via `$@` and degrade gracefully when invoked with no argument.
+All three accept an optional argument via `$@` and degrade gracefully when invoked with no argument.
 
 ### Test-runner observation
 

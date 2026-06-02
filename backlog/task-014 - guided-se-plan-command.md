@@ -38,7 +38,7 @@ At the end of the flow, the command writes the structured plan file to the proje
 
 Reference: `~/.pi/docs/se-pi-upgrades.md` Tier 3 item #4 ("`/se-plan` as a guided session command"). `ctx.ui.custom`, `ctx.ui.input`, `ctx.ui.select` shapes and `pi.sendUserMessage` semantics in `~/.pi/docs/pi-package-expert-guide.md` §4.
 
-This is **not** the same as the `/se-plan-brief` prompt template in task-007. The prompt template is a one-shot skeleton expansion; this command is an interactive interview that captures structured answers, persists them, and writes a file. The two compose: the prompt template can be a fast-path for users who already have a brief in mind; the command is the path for users who want to be walked through it.
+This replaces the dropped one-shot planning prompt-template idea from task-007 with an interactive interview that captures structured answers, persists them, and writes a file. The command is the path for users who want to be walked through a plan brief rather than expanding a one-shot skeleton.
 
 This is also **not** the same as the subagent-command wrapping in task-008. That work makes review fan-out deterministic by wrapping `pi-subagents` calls. This work makes the planning interview deterministic by replacing the interview with a UI flow.
 
@@ -68,7 +68,6 @@ This is also **not** the same as the subagent-command wrapping in task-008. That
 - `skills/se-plan/SKILL.md`
 - `skills/se-plan/references/universal-planning.md` (input source for the interview steps)
 - task-001 (`pi.appendEntry` substrate, `se:plan-draft` entry shape)
-- task-007 (`/se-plan-brief` prompt template, fast-path alternative)
 - task-011 (`before_agent_start` injection that surfaces in-progress plan state)
 - `~/.pi/docs/se-pi-upgrades.md` (Tier 3 item #4)
 - `~/.pi/docs/pi-package-expert-guide.md` (§4 ExtensionAPI, `ctx.ui.custom`, `pi.sendUserMessage`, `pi.appendEntry`)
