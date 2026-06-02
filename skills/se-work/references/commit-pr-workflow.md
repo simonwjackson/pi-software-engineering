@@ -43,8 +43,8 @@ Fall back to `main` only if both fail.
 ## Commit-only workflow
 
 1. If the working tree is clean, report that there is nothing to commit and stop.
-2. If detached, ask whether to create a feature branch. If declined, continue only if the user explicitly wants a detached commit.
-3. If on the default branch, warn and ask whether to create a feature branch first. Never commit directly to the default branch without explicit permission.
+2. If detached, stop unless the developer explicitly wants a detached commit or explicitly asks to create a branch-backed worktree/branch.
+3. Work on the currently checked-out branch. Trunk-style commits to the default branch are allowed when that is the current branch; do not create or switch to a traditional feature branch unless the developer explicitly asks.
 4. Determine the message convention:
    - documented repo convention already in context
    - recent commit history
@@ -59,9 +59,9 @@ Fall back to `main` only if both fail.
 
 ## Ship / PR workflow
 
-### 1. Resolve branch and state
+### 1. Resolve current checkout state
 
-If detached, ask to create a feature branch. Stop if the user declines.
+If detached, stop unless the developer explicitly wants a detached commit or explicitly asks to create a branch-backed worktree/branch.
 
 If the working tree is clean:
 
@@ -74,16 +74,14 @@ If the working tree is clean:
    git log <upstream>..HEAD --oneline
    ```
 3. Route:
-   - default branch with unpushed commits or no upstream: ask to create a feature branch; pushing default directly is not supported
-   - default branch, all pushed, no open PR: report no feature branch work and stop
-   - feature branch, no upstream: continue to push
-   - feature branch, unpushed commits: continue to push
-   - feature branch, all pushed, no open PR: skip commit/push and create PR
-   - feature branch, all pushed, open PR: ask whether to refresh the PR description; otherwise report up to date
+   - current branch with no upstream: ask before pushing; if the developer wants a PR but this is the default/trunk branch, stop unless they explicitly authorize branch creation
+   - current branch with unpushed commits: continue to push only when the user asked to ship/push/PR
+   - current branch all pushed, no open PR: create a PR only when the current branch is already PR-shaped or the developer explicitly asks how to proceed
+   - current branch all pushed, open PR: ask whether to refresh the PR description; otherwise report up to date
 
-### 2. Branch if needed
+### 2. Never branch implicitly
 
-If on the default branch and commits/changes need to move to a feature branch, read `references/branch-creation.md` and follow its decision flow. It handles stale local base, unpushed commits on local base, and uncommitted changes that collide with the fresh remote base.
+Do not run `git checkout -b`, switch the shared checkout to another branch, or move default-branch commits to a feature branch unless the developer explicitly asks. If isolation is needed, use a worktree. If a PR is impossible without creating a branch, explain that and stop for explicit instruction.
 
 ### 3. Create any remaining atomic commits
 

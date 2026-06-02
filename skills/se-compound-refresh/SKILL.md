@@ -616,7 +616,7 @@ After all actions are executed and the report is generated, handle committing th
 ### Detect git context
 
 Before offering options, check:
-1. Which branch is currently checked out (main/master vs feature branch)
+1. Which branch/worktree is currently checked out
 2. Whether the working tree has other uncommitted changes beyond what compound-refresh modified
 3. Recent commit messages to match the repo's commit style
 
@@ -626,29 +626,22 @@ Use sensible defaults — no user to ask:
 
 | Context | Default action |
 |---------|---------------|
-| On main/master | Create a branch named for what was refreshed (e.g., `docs/refresh-auth-and-ci-learnings`), commit, attempt to open a PR. If PR creation fails, report the branch name. |
-| On a feature branch | Commit as a separate commit on the current branch |
+| Any current branch/worktree | Commit as a separate commit on the current branch |
+| PR requested but current checkout is not PR-shaped | Stop and ask for explicit branch/worktree instructions; do not create a branch implicitly |
 | Git operations fail | Include the recommended git commands in the report and continue |
 
 Stage only the files that compound-refresh modified — not other dirty files in the working tree.
 
 ### Interactive mode
 
-First, run `git branch --show-current` to determine the current branch. Then present the correct options based on the result. Stage only compound-refresh files regardless of which option the user picks.
+First, run `git branch --show-current` to determine the current branch. Stage only compound-refresh files regardless of which option the user picks. Do not offer branch creation unless the developer explicitly asked for it.
 
-**If the current branch is main, master, or the repo's default branch:**
-
-1. Create a branch, commit, and open a PR (recommended) — the branch name should be specific to what was refreshed, not generic (e.g., `docs/refresh-auth-learnings` not `docs/compound-refresh`)
-2. Commit directly to `{current branch name}`
-3. Don't commit — I'll handle it
-
-**If the current branch is a feature branch, clean working tree:**
+**If the working tree is clean:**
 
 1. Commit to `{current branch name}` as a separate commit (recommended)
-2. Create a separate branch and commit
-3. Don't commit
+2. Don't commit — I'll handle it
 
-**If the current branch is a feature branch, dirty working tree (other uncommitted changes):**
+**If the working tree is dirty (other uncommitted changes):**
 
 1. Commit only the compound-refresh changes to `{current branch name}` (selective staging — other dirty files stay untouched)
 2. Don't commit
@@ -703,4 +696,4 @@ After the refresh report is generated, check whether the project's instruction f
       ```
    c. In interactive mode, explain to the user why this matters — agents working in this repo (including fresh sessions, other tools, or collaborators without the plugin) won't know to check `docs/solutions/` unless the instruction file surfaces it. Show the proposed change and where it would go, then use the platform's blocking question tool to get consent before making the edit: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to presenting the proposal in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question. In autofix mode, include it as a "Discoverability recommendation" line in the report — do not attempt to edit instruction files (autofix scope is doc maintenance, not project config).
 
-5. **Amend or create a follow-up commit when the check produces edits.** If step 4 resulted in an edit to an instruction file and Phase 5 already committed the refresh changes, stage the newly edited file and either amend the existing commit (if still on the same branch and no push has occurred) or create a small follow-up commit (e.g., `docs: add docs/solutions/ discoverability to AGENTS.md`). If Phase 5 already pushed the branch to a remote (e.g., the branch+PR path), push the follow-up commit as well so the open PR includes the discoverability change. This keeps the working tree clean and the remote in sync at the end of the run. If the user chose "Don't commit" in Phase 5, leave the instruction-file edit unstaged alongside the other uncommitted refresh changes — no separate commit logic needed.
+5. **Amend or create a follow-up commit when the check produces edits.** If step 4 resulted in an edit to an instruction file and Phase 5 already committed the refresh changes, stage the newly edited file and either amend the existing commit (if still on the same branch and no push has occurred) or create a small follow-up commit (e.g., `docs: add docs/solutions/ discoverability to AGENTS.md`). If Phase 5 already pushed the current branch to a remote, push the follow-up commit as well so the open PR (if any) includes the discoverability change. This keeps the working tree clean and the remote in sync at the end of the run. If the user chose "Don't commit" in Phase 5, leave the instruction-file edit unstaged alongside the other uncommitted refresh changes — no separate commit logic needed.

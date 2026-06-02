@@ -39,7 +39,7 @@ Compound documentation (`/se-compound`) captures what happened in the current se
 
 ## Time Range
 
-The caller may specify a time range -- either explicitly ("last 3 days", "this past week", "last month") or implicitly through context ("what did I work on recently" implies a few days; "how did this feature evolve" implies the full feature branch lifetime).
+The caller may specify a time range -- either explicitly ("last 3 days", "this past week", "last month") or implicitly through context ("what did I work on recently" implies a few days; "how did this feature evolve" implies the full workstream lifetime).
 
 Infer the time range from the request and map it to a scan window. **Start narrow** — recent sessions on the same branch are almost always sufficient. Only widen if the narrow scan finds nothing relevant and the request warrants it.
 
@@ -146,7 +146,7 @@ A session being returned by `se-session-inventory` only confirms it lives in the
 
 Do **not** roll your own per-file `grep -l` calls — step 2 (the `--keyword` mode) replaces that pattern.
 
-**Note: `gitBranch` is captured at the first user message only.** A session that began on `main` and did substantive work on a feature branch via mid-session `git checkout` records `branch: "main"`. Branch-match returning nothing is **not** conclusive evidence of "no prior history" — that is exactly why step 2 is required in the zero-branch-match case.
+**Note: `gitBranch` is captured at the first user message only.** A session that began on one branch and later moved to another checkout records only the initial branch. Branch-match returning nothing is **not** conclusive evidence of "no prior history" — that is exactly why step 2 is required in the zero-branch-match case.
 
 Prefer sessions that are:
 - Strongly correlated (same branch)

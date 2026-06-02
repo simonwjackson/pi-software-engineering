@@ -225,25 +225,11 @@ Apply skip rules in order:
 - `state` is `CLOSED` or `MERGED` -> stop with message `PR is closed/merged; not reviewing.`
 - **Trivial-PR judgment**: spawn a lightweight sub-agent (use `model: haiku` in Claude Code; gpt-5.4-nano or equivalent in Codex) with the PR title, body, and changed file paths. The agent's task: "Is this an automated or trivial PR that does not warrant a code review? Consider: dependency lock-file or manifest-only bumps, automated release commits, chore version increments with no substantive code changes. When in doubt, answer no — false negatives (skipped reviews that should have run) are more costly than false positives (unnecessary reviews)." If the judgment returns yes: stop with message `PR appears to be a trivial automated PR; not reviewing. Run without a PR argument to review the current branch, or pass base:<ref> if review is intended.`
 
-When any skip rule fires, emit the message and stop without dispatching reviewers, switching the checkout, or running scope detection. **Standalone branch mode and `base:` mode are unaffected** -- they always run the full review. **Draft PRs are reviewed normally** -- draft status is not a skip condition; early feedback on in-progress work is valuable.
+When any skip rule fires, emit the message and stop without dispatching reviewers, switching the checkout, or running scope detection. **Standalone current-checkout mode and `base:` mode are unaffected** -- they always run the full review. **Draft PRs are reviewed normally** -- draft status is not a skip condition; early feedback on in-progress work is valuable.
 
-If no skip rule fires, proceed to the checkout logic below.
+If no skip rule fires, proceed to isolated review setup. Never switch the shared checkout to a PR branch. For an explicit PR target, review from an isolated worktree/checkout for that PR, or stop with: `Review failed. Reason: cannot switch shared checkout; use an isolated worktree for the PR or run from the already checked-out PR worktree.`
 
-First, verify the worktree is clean before switching branches:
-
-```
-git status --porcelain
-```
-
-If the output is non-empty, inform the user: "You have uncommitted changes on the current branch. Stash or commit them before reviewing a PR, or use standalone mode (no argument) to review the current branch as-is." Do not proceed with checkout until the worktree is clean.
-
-Then check out the PR branch so persona agents can read the actual code (not the current checkout):
-
-```
-gh pr checkout <number-or-url>
-```
-
-Then fetch PR metadata. Capture the base branch name and the PR base repository identity, not just the branch name. Project `reviews` and `comments` to a `hasPriorComments` boolean via `--jq` -- counting only, not materializing review or comment bodies into the orchestrator's context. The reviews filter excludes approval-state submissions with empty bodies (approvals are not feedback to verify), so PRs with only approval clicks correctly fall through the gate. Stage 3 uses `hasPriorComments` to decide whether to spawn `previous-comments`:
+When running inside the isolated PR worktree, fetch PR metadata. Capture the base branch name and the PR base repository identity, not just the branch name. Project `reviews` and `comments` to a `hasPriorComments` boolean via `--jq` -- counting only, not materializing review or comment bodies into the orchestrator's context. The reviews filter excludes approval-state submissions with empty bodies (approvals are not feedback to verify), so PRs with only approval clicks correctly fall through the gate. Stage 3 uses `hasPriorComments` to decide whether to spawn `previous-comments`:
 
 ```
 gh pr view <number-or-url> --json title,body,baseRefName,headRefName,url,reviews,comments --jq '{title, body, baseRefName, headRefName, url, hasPriorComments: ((.reviews | map(select(.state != "APPROVED" or .body != "")) | length) > 0 or (.comments | length) > 0)}'
@@ -275,25 +261,11 @@ if [ -n "$PR_BASE_REF" ]; then BASE=$(git merge-base HEAD "$PR_BASE_REF" 2>/dev/
 if [ -n "$BASE" ]; then echo "BASE:$BASE" && echo "FILES:" && git diff --name-only $BASE && echo "DIFF:" && git diff -U10 $BASE && echo "UNTRACKED:" && git ls-files --others --exclude-standard; else echo "ERROR: Unable to resolve PR base branch <base> locally. Fetch the base branch and rerun so the review scope stays aligned with the PR."; fi
 ```
 
-Extract PR title/body, base branch, and PR URL from `gh pr view`, then extract the base marker, file list, diff content, and `UNTRACKED:` list from the local command. Do not use `gh pr diff` as the review scope after checkout -- it only reflects the remote PR state and will miss local fix commits until they are pushed. If the base ref still cannot be resolved from the PR's actual base repository after the fetch attempt, stop instead of falling back to `git diff HEAD`; a PR review without the PR base branch is incomplete.
+Extract PR title/body, base branch, and PR URL from `gh pr view`, then extract the base marker, file list, diff content, and `UNTRACKED:` list from the local command. Do not use `gh pr diff` as the review scope after isolated setup -- it only reflects the remote PR state and will miss local fix commits until they are pushed. If the base ref still cannot be resolved from the PR's actual base repository after the fetch attempt, stop instead of falling back to `git diff HEAD`; a PR review without the PR base branch is incomplete.
 
 **If a branch name is provided as an argument:**
 
-Check out the named branch, then diff it against the base branch. Substitute the provided branch name (shown here as `<branch>`).
-
-If `mode:report-only` or `mode:headless` is active, do **not** run `git checkout <branch>` on the shared checkout. For `mode:report-only`, tell the caller: "mode:report-only cannot switch the shared checkout to review another branch. Run it from an isolated worktree/checkout for `<branch>`, or run report-only on the current checkout with no target argument." For `mode:headless`, emit `Review failed (headless mode). Reason: cannot switch shared checkout. Re-invoke with base:<ref> to review the current checkout, or run from an isolated worktree.` Stop here unless the review is already running in an isolated checkout.
-
-First, verify the worktree is clean before switching branches:
-
-```
-git status --porcelain
-```
-
-If the output is non-empty, inform the user: "You have uncommitted changes on the current branch. Stash or commit them before reviewing another branch, or provide a PR number instead." Do not proceed with checkout until the worktree is clean.
-
-```
-git checkout <branch>
-```
+Do not switch the shared checkout to the named branch. If the current checkout is already the correct branch/worktree, continue. Otherwise, review the named branch only from an isolated worktree/checkout, or stop with: `Review failed. Reason: cannot switch shared checkout. Run from an isolated worktree for <branch>, or run with no target on the current checkout.`
 
 Then detect the review base branch and compute the merge-base. Run the `scripts/resolve-base.sh` script, which handles fork-safe remote resolution with multi-fallback detection (PR metadata -> `origin/HEAD` -> `gh repo view` -> common branch names):
 
@@ -315,7 +287,7 @@ You may still fetch additional PR metadata with `gh pr view` for title, body, li
 
 **If no argument (standalone on current branch):**
 
-Detect the review base branch and compute the merge-base using the same `scripts/resolve-base.sh` script as branch mode:
+Detect the review base branch and compute the merge-base using the same `scripts/resolve-base.sh` script as targeted-checkout mode:
 
 ```
 RESOLVE_OUT=$(bash scripts/resolve-base.sh) || { echo "ERROR: resolve-base.sh failed"; exit 1; }
@@ -341,7 +313,7 @@ Understand what the change is trying to accomplish. The source of intent depends
 
 **PR/URL mode:** Use the PR title, body, and linked issues from `gh pr view` metadata. Supplement with commit messages from the PR if the body is sparse.
 
-**Branch mode:** Run `git log --oneline ${BASE}..<branch>` using the resolved merge-base from Stage 1.
+**Targeted checkout mode:** Run `git log --oneline ${BASE}..HEAD` using the resolved merge-base from Stage 1.
 
 **Standalone (current branch):** Run:
 
@@ -812,7 +784,7 @@ After presenting findings and verdict (Stage 6), route the next steps by mode. R
 #### Step 3: Apply fixes with one fixer
 
 - Spawn exactly one fixer subagent for the current fixer queue in the current checkout. That fixer applies all approved changes and runs the relevant targeted tests in one pass against a consistent tree.
-- Do not fan out multiple fixers against the same checkout. Parallel fixers require isolated worktrees/branches and deliberate mergeback.
+- Do not fan out multiple fixers against the same checkout. Parallel fixers require isolated worktrees and deliberate mergeback.
 - Do not start a mutating review round concurrently with browser testing on the same checkout. Future orchestrators that want both must either run `mode:report-only` during the parallel phase or isolate the mutating review in its own checkout/worktree.
 
 **Queue contract by caller path:**
@@ -874,7 +846,7 @@ Common outcomes:
 - **PR mode (entered via PR number/URL):**
   - **Push fixes** -- push commits to the existing PR branch
   - **Exit** -- done for now
-- **Branch mode (feature branch with no PR, and not the resolved review base/default branch):**
+- **Current checkout mode (no PR, and not the resolved review base/default branch):**
   - **Create a PR (Recommended)** -- push and open a pull request
   - **Continue without PR** -- stay on the branch
   - **Exit** -- done for now
@@ -882,7 +854,7 @@ Common outcomes:
   - **Continue** -- proceed with next steps
   - **Exit** -- done for now
 
-If "Create a PR": first publish the branch with `git push --set-upstream origin HEAD`, then use `gh pr create` with a title and summary derived from the branch changes.
+If "Create a PR": first confirm the current checkout is already PR-shaped or the developer explicitly wants a PR from this branch. Then publish with `git push --set-upstream origin HEAD` and use `gh pr create` with a title and summary derived from the current changes.
 If "Push fixes": push the branch with `git push` to update the existing PR.
 
 **Autofix, report-only, and headless modes:** stop after the report, artifact emission, and residual-work handoff. Do not commit, push, or create a PR.

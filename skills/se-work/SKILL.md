@@ -90,7 +90,7 @@ Determine how to proceed based on what was provided in `<input_document>`.
    fi
    ```
 
-   **Default: do all work in a dedicated worktree.** The main checkout stays clean for coordination, review, and future work. A normal `/se-work` execution should not edit the default branch checkout directly.
+   **Workspace rule: use a worktree or the current branch.** Traditional branch workflows (`git checkout -b`, switching the shared checkout to another branch, or creating a feature branch in-place) are forbidden unless the developer explicitly asks for that. Either keep working on the branch already checked out (trunk style is allowed), or create/switch to a dedicated worktree when isolation is useful.
 
    First, detect whether the current checkout is already a linked worktree:
 
@@ -99,27 +99,20 @@ Determine how to proceed based on what was provided in `<input_document>`.
    git rev-parse --show-toplevel
    ```
 
-   **If already inside the correct feature worktree:** continue there after confirming the branch name is meaningful.
+   **If already inside the correct worktree:** continue there.
 
-   **If on the default branch or in the main checkout:** create a worktree before editing files:
+   **If worktree isolation is needed:** use `se-worktree` and then `cd` into the created worktree:
 
    ```bash
    skill: se-worktree
-   # The skill creates .worktrees/<branch-name> from the remote default branch
-   cd .worktrees/<branch-name>
+   cd .worktrees/<worktree-name>
    ```
 
-   Use a meaningful branch name based on the plan title or work description (e.g., `feat/user-authentication`, `fix/email-validation`). Avoid opaque names like `worktree-jolly-beaming-raven`.
+   Use a meaningful worktree name based on the plan title or work description (e.g., `feat-user-authentication`, `fix-email-validation`). Avoid opaque names like `worktree-jolly-beaming-raven`.
 
-   **If already on a feature branch in the main checkout:** prefer moving the work into a dedicated worktree before continuing. If no local-only changes exist, create a worktree for that branch and switch to it. If local changes already exist, either move them into the worktree or ask before continuing in-place. Continuing in the main checkout requires explicit user confirmation.
+   **If working in the current checkout:** proceed on the currently checked-out branch, including the default branch when the project uses trunk-style work. Do not switch branches as setup.
 
-   **If the branch name is meaningless or auto-generated:** rename it before creating or continuing the worktree:
-
-   ```bash
-   git branch -m <meaningful-name>
-   ```
-
-   **Exceptions:** Only skip worktree isolation when the repository does not support worktrees, the task is a read-only investigation, or the user explicitly says to work in the current checkout. Record the reason before proceeding. Never commit directly to the default branch without explicit permission.
+   **Exceptions:** Only create or switch to a traditional non-worktree branch when the developer explicitly requests it. Record that request before proceeding.
 
 3. **Create Task List** _(skip if Phase 0 already built one, or if Phase 0 routed as Trivial)_
    - Use the platform's task tracking tool (`the platform's task-tracking primitive`/`the platform's task-tracking primitive`/`the platform's task-tracking primitive` in Claude Code, `update_plan` in Codex, or the equivalent on other harnesses) to break the plan into actionable tasks
@@ -407,10 +400,10 @@ When all Phase 2 tasks are complete and execution transitions to quality check, 
 ### Ship Complete Features
 
 - Mark all tasks completed before moving on
-- Push to GitHub and create/update the PR by default
+- Push/create a PR only when the current checkout already represents PR work or the developer explicitly asks
 - Poll PR approval and GitHub Actions/status checks; fix failures before merging
 - Merge with GitHub rebase/auto-rebase only — never classic merge commits
-- Clean up the local worktree and feature branch after merge/close
+- Clean up local worktrees after merge/close when they were used
 - Don't leave features 80% done
 - A finished feature that ships beats a perfect feature that doesn't
 
@@ -420,10 +413,10 @@ When all Phase 2 tasks are complete and execution transitions to quality check, 
 - **Skipping clarifying questions** - Ask now, not after building wrong thing
 - **Ignoring plan references** - The plan has links for a reason
 - **Testing at the end** - Test continuously or suffer later
-- **Working in the main checkout by default** - Create or switch to a dedicated worktree before editing files
+- **Unrequested branch setup** - Work in the current checkout or a dedicated worktree; do not create/switch traditional branches unless the developer explicitly asks
 - **Stopping at PR creation** - Show the PR, then monitor approval and checks instead of disappearing after `gh pr create`
 - **Classic merge commits** - Use rebase merge or auto-rebase; stop if the repository only allows classic merge
-- **Leaking worktrees** - Remove merged/closed worktrees and local branches once the work is done
+- **Leaking worktrees** - Remove completed worktrees once the work is done
 - **Mixed-purpose commits** - Do not combine unrelated behavior, cleanup, formatting, and drive-by fixes because they happened in the same session
 - **Losing follow-ups** - If a worthwhile follow-up is out of scope, capture it with `se-backlog` rather than relying on chat memory
 - **Using `git add .` reflexively** - Inspect and stage only the files or hunks that belong to the atomic slice

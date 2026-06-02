@@ -24,7 +24,7 @@ Before diving in, answer three questions:
 
 1. **Does this codebase have agent integration?** Search for tool definitions, system prompt construction, or LLM API calls. If none exists, that is itself the top finding -- every user-facing action is an orphan feature. Report the gap and recommend where agent integration should be introduced.
 2. **What stack?** Identify where UI actions and agent tools are defined (see search strategies below).
-3. **Incremental or full audit?** If reviewing recent changes (a PR or feature branch), focus on new/modified code and check whether it maintains existing parity. For a full audit, scan systematically.
+3. **Incremental or full audit?** If reviewing recent changes (a PR or current checkout), focus on new/modified code and check whether it maintains existing parity. For a full audit, scan systematically.
 
 **Stack-specific search strategies:**
 

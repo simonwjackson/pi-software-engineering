@@ -1,6 +1,6 @@
 ---
 name: se-worktree
-description: Create an isolated git worktree for feature work or PR review. Use by default when `se-work` starts coding work so the main checkout stays clean.
+description: Create an isolated git worktree for coding work or PR review when isolation is needed.
 allowed-tools: Bash(bash *worktree-manager.sh)
 compatibility: git
 argument-hint: "[branch-name]"
@@ -8,7 +8,7 @@ argument-hint: "[branch-name]"
 
 # Worktree Creation
 
-Create a worktree under `.worktrees/<branch>` with branch-specific setup that `git worktree add` alone does not handle:
+Create a branch-backed worktree under `.worktrees/<branch>` with setup that `git worktree add` alone does not handle. This is the allowed isolation path; do not use traditional branch creation/switching in the shared checkout unless the developer explicitly asks.
 
 - Copies `.env`, `.env.local`, `.env.test`, etc. from the main repo (skips `.env.example`)
 - Trusts `mise`/`direnv` configs, with branch-aware safety rules so review branches do not auto-grant trust to untrusted `.envrc` content
@@ -62,18 +62,18 @@ Modified configs are never auto-trusted. The script prints the manual trust comm
 
 ## When to create a worktree
 
-Create a worktree by default for coding work, including single-task work. The main checkout should stay clean for coordination, review, and future tasks.
+Create a worktree when isolation is useful for coding or review work. Otherwise, work on the currently checked-out branch/trunk.
 
 Worktrees are especially valuable when:
 - Reviewing a PR while keeping the main checkout free for other work
-- Running multiple features in parallel without branch-switching overhead
+- Running multiple tasks in parallel without switching the shared checkout
 - Keeping the default branch free of in-progress state
 
-Skip worktree creation only for read-only investigation, repositories that do not support worktrees, or explicit user direction to work in the current checkout. Record the reason when skipping.
+Skip worktree creation for read-only investigation, repositories that do not support worktrees, or when working directly in the current checkout is appropriate.
 
 ## Integration
 
-`se-work` uses this skill as the default setup path. Invoke `bash "${CLAUDE_SKILL_DIR:-.}/scripts/worktree-manager.sh" create <branch>` with a meaningful branch name derived from the work description (e.g., `feat/crowd-sniff`, `fix/email-validation`). Avoid auto-generated names like `worktree-jolly-beaming-raven` that obscure the work.
+`se-work` uses this skill when it needs isolated workspace setup. Invoke `bash "${CLAUDE_SKILL_DIR:-.}/scripts/worktree-manager.sh" create <branch>` with a meaningful worktree/branch name derived from the work description (e.g., `feat-crowd-sniff`, `fix-email-validation`). Avoid auto-generated names like `worktree-jolly-beaming-raven` that obscure the work.
 
 ## Troubleshooting
 

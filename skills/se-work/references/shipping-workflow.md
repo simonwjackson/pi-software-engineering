@@ -156,7 +156,7 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    gh pr merge --auto --rebase --delete-branch
    ```
 
-   Use a local fast-forward merge only when the user explicitly requests it and branch protection permits direct pushes:
+   Use a local fast-forward merge only when the developer explicitly requests this traditional branch operation and branch protection permits direct pushes:
 
    ```bash
    git fetch origin
@@ -170,7 +170,7 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
 
 6. **Clean Up Worktree**
 
-   After the PR is merged, closed as unneeded, or the user explicitly says the work is done and no more local changes are needed, clean up the local worktree and feature branch. Do not remove a worktree that still contains uncommitted or unpushed changes.
+   After the PR is merged, closed as unneeded, or the user explicitly says the work is done and no more local changes are needed, clean up the local worktree when one was used. Do not remove a worktree that still contains uncommitted or unpushed changes.
 
    Prefer the Pi PR supervisor extension when it is available and no further local commands need to run from the worktree:
 
@@ -195,7 +195,7 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    - Summarize what was completed
    - Link to the PR
    - State whether it was merged, auto-merge was enabled, or it is waiting on review/checks
-   - Confirm whether the remote branch and local worktree were cleaned up
+   - Confirm whether any local worktree was cleaned up
    - Note any follow-up work needed
    - Suggest next steps if applicable
 

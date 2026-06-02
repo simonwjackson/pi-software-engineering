@@ -334,7 +334,7 @@ const EMPTY_STATE_HINT =
   "No SE state recorded yet.\n" +
   "Likely first action:\n" +
   "  • /se-plan  — if you're starting from a fresh idea\n" +
-  "  • /skill:se-worktree  — if you're picking up an existing branch\n" +
+  "  • /skill:se-worktree  — if you want isolated workspace setup\n" +
   "  • just start coding  — phase, worktree, test-state will populate as you go"
 
 // ---------------------------------------------------------------------------

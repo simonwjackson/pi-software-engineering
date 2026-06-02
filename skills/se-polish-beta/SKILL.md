@@ -2,7 +2,7 @@
 name: se-polish-beta
 description: "[BETA] Start the dev server, open the feature in a browser, and iterate on improvements together."
 disable-model-invocation: true
-argument-hint: "[PR number, branch name, or blank for current branch]"
+argument-hint: "[PR number, worktree path, or blank for current branch]"
 compatibility: none
 ---
 
@@ -10,11 +10,11 @@ compatibility: none
 
 Start the dev server, open the feature in a browser, and iterate. You use the feature, say what feels off, and fixes happen.
 
-## Phase 0: Get on the right branch
+## Phase 0: Get on the right workspace
 
-1. If a PR number or branch name was provided, check it out (probe for existing worktrees first).
-2. If blank, use the current branch.
-3. Verify the current branch is not main/master.
+1. If a PR number or worktree path was provided, use an existing isolated worktree/checkout for it; do not switch the shared checkout.
+2. If blank, use the current branch/worktree.
+3. Traditional branch creation or checkout is forbidden unless the developer explicitly asks.
 
 ## Phase 1: Start the dev server
 
