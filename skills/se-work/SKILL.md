@@ -91,7 +91,7 @@ Determine how to proceed based on what was provided in `<input_document>`.
    fi
    ```
 
-   **Workspace rule: use a worktree or the current branch.** Traditional branch workflows (`git checkout -b`, switching the shared checkout to another branch, or creating a feature branch in-place) are forbidden unless the developer explicitly asks for that. Either keep working on the branch already checked out (trunk style is allowed), or create/switch to a dedicated worktree when isolation is useful.
+   **Workspace rule: default to a dedicated worktree.** Create and work in a dedicated worktree unless the developer explicitly asks to stay in the current branch/checkout. Traditional branch workflows (`git checkout -b`, switching the shared checkout to another branch, or creating a feature branch in-place) are forbidden unless the developer explicitly asks for that.
 
    First, detect whether the current checkout is already a linked worktree:
 
@@ -102,7 +102,7 @@ Determine how to proceed based on what was provided in `<input_document>`.
 
    **If already inside the correct worktree:** continue there.
 
-   **If worktree isolation is needed:** use `se-worktree` and then `cd` into the created worktree:
+   **Otherwise (default):** use `se-worktree` and then `cd` into the created worktree:
 
    ```bash
    skill: se-worktree
@@ -111,7 +111,7 @@ Determine how to proceed based on what was provided in `<input_document>`.
 
    Use a meaningful worktree name based on the plan title or work description (e.g., `feat-user-authentication`, `fix-email-validation`). Avoid opaque names like `worktree-jolly-beaming-raven`.
 
-   **If working in the current checkout:** proceed on the currently checked-out branch, including the default branch when the project uses trunk-style work. Do not switch branches as setup.
+   **If the developer explicitly asked to stay in the current checkout:** proceed on the currently checked-out branch, including the default branch when the project uses trunk-style work. Do not switch branches as setup.
 
    **Exceptions:** Only create or switch to a traditional non-worktree branch when the developer explicitly requests it. Record that request before proceeding.
 
@@ -395,7 +395,7 @@ When all Phase 2 tasks are complete and execution transitions to quality check, 
 - Write tests for new code
 - Run local tests, type/static checks, formatter, and lint before considering work complete
 - Commit only atomic, working slices that are reviewable and revertable on their own
-- Work in the current checkout or a dedicated worktree; do not create/switch traditional branches without explicit developer direction
+- Default to a dedicated worktree; only stay in the current checkout when the developer explicitly asks. Never create/switch traditional branches without explicit developer direction
 - Review every change — inline for simple additive work, full review for everything else
 
 ### Ship Complete Features
@@ -415,7 +415,7 @@ When all Phase 2 tasks are complete and execution transitions to quality check, 
 - **Skipping clarifying questions** - Ask now, not after building wrong thing
 - **Ignoring plan references** - The plan has links for a reason
 - **Testing at the end** - Test continuously or suffer later
-- **Unrequested branch setup** - Work in the current checkout or a dedicated worktree; do not create/switch traditional branches unless the developer explicitly asks
+- **Unrequested branch setup** - Default to a dedicated worktree (stay in the current checkout only on explicit request); never create/switch traditional branches unless the developer explicitly asks
 - **Publishing by default** - Do not push or open a PR unless the developer explicitly asks
 - **Classic merge commits** - Use local fast-forward/rebase or GitHub rebase when explicitly publishing; never create classic merge commits
 - **Leaking worktrees** - Remove completed worktrees once the work is done
