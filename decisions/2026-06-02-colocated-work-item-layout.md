@@ -39,7 +39,9 @@ zero-padded numeric id**, with all of its artifacts colocated:
 
 ```
 work/
-├── parking-lot.md                 # cheap ambient capture (ungraduated items, front-matter blocks)
+├── parking-lot/                   # ungraduated candidates: one file per item (decision 15)
+│   ├── 01JABZ1-add-foo-source.md  #   standard single front-matter block + body
+│   └── 01JABZ2-add-bar-source.md
 │
 ├── 01JABC2X-oauth-login/          # parked first → has item.md
 │   ├── work.md                    #   spine record: id, slug, origin, parent-id, status, reason
@@ -88,10 +90,10 @@ Ids are **time-sortable (ULID/KSUID)**, not sequential — see decision 3.
    origin-agnostic spine; the slug is cosmetic. **Supersedes the earlier
    "zero-padded numeric ids" choice.**
 
-4. **Graduate on first artifact.** Cheap capture stays a single zero-prompt
-   append to `parking-lot.md` (a front-matter block per entry). A folder is born
+4. **Graduate on first artifact.** Cheap capture is a single zero-prompt *file
+   write* to `work/parking-lot/<id>-<slug>.md` (decision 15). A folder is born
    only when the first real artifact (`requirements.md` / `plan.md` / `repro.md`,
-   or the parked block migrated out into `item.md`) is written — at which point
+   or the parked file moved out into `item.md`) is written — at which point
    `work.md` is also created. Promote records *intent*; it does not create a
    folder. No empty folders, ever.
 
@@ -143,12 +145,28 @@ Ids are **time-sortable (ULID/KSUID)**, not sequential — see decision 3.
     contain it. Solutions remain a flat cross-cutting knowledge base.
 
 14. **Ideation IS the parking lot.** `se-ideate` emits its ranked candidates as
-    front-matter blocks directly into `parking-lot.md` — each a candidate
-    work-item carrying its rank/rationale. `docs/ideation/` is retired; there is
-    no separate ideation store. Promotion graduates one candidate into a
+    one file per candidate into `work/parking-lot/` (decision 15) — each a
+    candidate work-item carrying its rank/rationale. `docs/ideation/` is retired;
+    there is no separate ideation store. Promotion graduates one candidate into a
     `work/<id>/` folder (the same graduate-on-first-artifact path as any parked
     item). The parking lot is therefore an *ordered candidate pool*, fed by both
     ambient capture and ideation runs.
+
+15. **Parking lot is one file per item, not a single multi-block file.**
+    `work/parking-lot/<id>-<slug>.md`, each a *standard* single YAML
+    front-matter block + markdown body. **Supersedes the earlier "front-matter
+    block per entry in `parking-lot.md`" choice**, which was decided *before*
+    multi-worktree parallelism was prioritized (decision 3). A single shared file
+    reintroduces the exact concurrent-worktree merge-conflict that killed the
+    `.next-id` counter, needs a hand-rolled multi-block parser (`---` is
+    ambiguously delimiter/thematic-break/separator), and has no per-item history.
+    One file per item is conflict-free on capture (unique filename), parseable by
+    any front-matter tool, has per-item git history, and is **symmetric with
+    graduated items** — graduation is `git mv work/parking-lot/<id>-<slug>.md
+    work/<id>-<slug>/item.md` + write `work.md`. A single readable list is a
+    regenerated *view*, not the storage format; rank/priority is a field, not
+    file position. This is the "Backlog.md-style" the `se-backlog` skill already
+    claims.
 
 ## Granularity (sized for 100%-LLM execution)
 
@@ -174,11 +192,11 @@ trees — grouping is by reference.
 
 ```
 Two entry points:
-  (a) park → flat line in parking-lot.md → (first artifact) → graduate to work/<id>/ WITH item.md
-  (b) brainstorm/plan/debug directly      → folder born at first artifact WITHOUT item.md
+  (a) park → work/parking-lot/<id>-<slug>.md → (first artifact) → git mv to work/<id>/item.md
+  (b) brainstorm/plan/debug directly         → folder born at first artifact WITHOUT item.md
 
-Either way: id allocated once → artifacts accrete → git mv to work/.archive/ on
-a reasoned terminal state. Id retired forever; .next-id never decrements.
+Either way: id minted once → artifacts accrete → git mv to work/.archive/ on
+a reasoned terminal state. Id retired forever; ids are never reused.
 ```
 
 ## Gotchas to design against
@@ -193,7 +211,7 @@ a reasoned terminal state. Id retired forever; .next-id never decrements.
 - **Every glob must exclude `work/.archive/` by default.** Plan listing, pulse
   reports, `se-sessions`, "list active work" — all skip archived unless asked.
 - **`backlog_list` ≠ "list work-items."** Backlog view = items with `item.md`
-  (or still in `parking-lot.md`). Initiative view = all folders. Keep distinct.
+  (or still in `work/parking-lot/`). Initiative view = all folders. Keep distinct.
 - **Promotion is backlog-subset only.** Un-parked work is born graduated; there
   is nothing to promote. `backlog_promote` operates only on the
   `item.md`/parking-lot subset. Promote is not a universal gate.
@@ -215,7 +233,7 @@ a reasoned terminal state. Id retired forever; .next-id never decrements.
   id and writes `work.md` at graduation; add a `work_item_close` (archive) seam
   that flips status+reason then `git mv`s to `work/.archive/`; repoint
   `backlog_add`/`_list`/`_promote`/`_remove`/`_export` at `work/<id>/` and the
-  `parking-lot.md` front-matter blocks. No counter, no scan.
+  `work/parking-lot/<id>-<slug>.md` per-item files. No counter, no scan.
 - **Skill prose:** `se-backlog`, `se-brainstorm`, `se-ideate`, `se-plan`,
   `se-work`, `se-debug` — adopt `work/<id>/` paths, the three-origin model,
   graduate-on-first-artifact, id-only references, archive-on-terminal-state.
@@ -227,8 +245,10 @@ a reasoned terminal state. Id retired forever; .next-id never decrements.
 
 ## Resolved (interview, 2026-06-02, second pass)
 
-- **Parking-lot entry shape:** a front-matter block per entry in
-  `parking-lot.md`, lifted verbatim into `item.md` on graduation.
+- **Parking-lot entry shape:** one standard front-matter file per item at
+  `work/parking-lot/<id>-<slug>.md`, moved into `item.md` on graduation
+  (decision 15 — reversed the original single-file block shape for
+  worktree-concurrency and standard-format reasons).
 - **Terminal-reason home:** per-folder `work.md` (decision 11) — uniform for
   both origins; archiving flips its `status:`/`reason:` before `git mv`.
 - **Allocator concurrency:** dissolved — time-sortable ids (decision 3) need no
@@ -244,5 +264,5 @@ a reasoned terminal state. Id retired forever; .next-id never decrements.
 - Whether `parent-id` epic links are validated/repaired by tooling or left as
   free references.
 - How the parking lot tolerates ideation volume (an `se-ideate` run can emit
-  dozens of candidates) — cap at top-N, paginate, or accept large
-  `parking-lot.md`.
+  dozens of candidates) — cap at top-N, or accept many files in
+  `work/parking-lot/`.
