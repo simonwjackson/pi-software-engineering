@@ -66,8 +66,12 @@ Ids are **time-sortable (ULID/KSUID)**, not sequential — see decision 3.
 
 ### Decisions locked (interview, 2026-06-02)
 
-1. **Full unification.** One `work/<id>/` tree is the source of truth.
-   Replaces `backlog/` + `docs/plans/` + `docs/brainstorms/` + `docs/ideation/`.
+1. **Full unification (with two explicit exclusions).** One `work/<id>/` tree at
+   **repo root** is the source of truth for initiative-scoped artifacts —
+   replaces `backlog/` + `docs/plans/` + `docs/brainstorms/`. **Excluded:**
+   `docs/solutions/` stays a separate cross-cutting knowledge base (decision 13),
+   and `docs/ideation/` collapses into the parking lot rather than into
+   `work/<id>/` (decision 14).
 
 2. **The id is the spine; the backlog item is optional.** The folder and its id
    exist because *work exists*, not because something was parked. `item.md` is
@@ -114,9 +118,11 @@ Ids are **time-sortable (ULID/KSUID)**, not sequential — see decision 3.
    extension only know `work/<id>/`. Consuming repos reorganize manually.
    Simplest code, roughest upgrade — accepted deliberately.
 
-9. **Big-bang migration of THIS repo** as the reference implementation: assign
-   ids to existing artifacts, group related ones, move into `work/<id>/`,
-   sweep terminal ones to `work/.archive/`.
+9. **Migrate `bazzar` first** (the sandbox at `~/code/sandbox/bazzar`) as the
+   reference implementation: validate the tooling there, big-bang migrate its
+   real `backlog/` + `docs/plans/` into `work/<id>/`, sweep terminal ones to
+   `work/.archive/`. The skills repo migrates its own artifacts later, once the
+   approach is proven in bazzar.
 
 10. **All SE consumers.** This becomes the package default, not a personal
     convention. Skill prose and the extension change for everyone.
@@ -129,6 +135,20 @@ Ids are **time-sortable (ULID/KSUID)**, not sequential — see decision 3.
     the *optional* backlog-content inhabitant alongside it.
 
 12. **Two tiers of granularity, sized for LLM execution — see below.**
+
+13. **`docs/solutions/` stays separate and global.** Compounded learnings
+    (`se-compound`) are reusable knowledge meant to be found by *future,
+    unrelated* work — not owned by one initiative, and never buried inside an
+    archived `work/<id>/`. A work-item may *link* a solution by id; it does not
+    contain it. Solutions remain a flat cross-cutting knowledge base.
+
+14. **Ideation IS the parking lot.** `se-ideate` emits its ranked candidates as
+    front-matter blocks directly into `parking-lot.md` — each a candidate
+    work-item carrying its rank/rationale. `docs/ideation/` is retired; there is
+    no separate ideation store. Promotion graduates one candidate into a
+    `work/<id>/` folder (the same graduate-on-first-artifact path as any parked
+    item). The parking lot is therefore an *ordered candidate pool*, fed by both
+    ambient capture and ideation runs.
 
 ## Granularity (sized for 100%-LLM execution)
 
@@ -223,3 +243,6 @@ a reasoned terminal state. Id retired forever; .next-id never decrements.
 - ULID vs KSUID (vs other time-sortable scheme) and slug-length conventions.
 - Whether `parent-id` epic links are validated/repaired by tooling or left as
   free references.
+- How the parking lot tolerates ideation volume (an `se-ideate` run can emit
+  dozens of candidates) — cap at top-N, paginate, or accept large
+  `parking-lot.md`.
