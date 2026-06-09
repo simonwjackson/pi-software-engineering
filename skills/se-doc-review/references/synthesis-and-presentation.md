@@ -357,8 +357,8 @@ This rule prevents two failure modes: (1) regressions where a fix didn't actuall
 
 During synthesis, discard any finding that recommends deleting or removing files in:
 
-- `docs/brainstorms/`
-- `docs/plans/`
+- `work/items/active/*/requirements.md`
+- `work/items/active/*/plan.md`
 - `docs/solutions/`
 
 These are pipeline artifacts and must not be flagged for removal.

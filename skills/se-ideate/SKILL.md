@@ -15,7 +15,7 @@ compatibility: none
 - `se-brainstorm` answers: "What exactly should one chosen idea mean?"
 - `se-plan` answers: "How should it be built?"
 
-This workflow produces a ranked ideation artifact in `docs/ideation/`. It does **not** produce requirements, plans, or code.
+This workflow produces a ranked ideation artifact in `work/items/parking-lot/`. It does **not** produce requirements, plans, or code.
 
 ## Interaction Method
 
@@ -48,7 +48,7 @@ If no argument is provided, proceed with open-ended ideation.
 
 #### 0.1 Check for Recent Ideation Work
 
-Look in `docs/ideation/` for ideation documents created within the last 30 days.
+Look in `work/items/parking-lot/` for ideation documents created within the last 30 days.
 
 Treat a prior ideation doc as relevant when:
 - the topic matches the requested focus

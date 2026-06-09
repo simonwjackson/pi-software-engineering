@@ -76,7 +76,7 @@ Immediately load the `se-work` skill in the current session using the finalized 
 
 Load the `se-proof` skill in HITL-review mode with:
 
-- **source file:** `docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md`
+- **source file:** `work/items/active/<id>-<slug>/requirements.md`
 - **doc title:** `Requirements: <topic title>`
 - **identity:** `ai:software-engineering` / `Software Engineering`
 - **recommended next step:** `se-plan` (shown in the se-proof skill's final terminal output)
@@ -103,7 +103,7 @@ When complete and ready for planning, display:
 ```text
 Brainstorm complete!
 
-Requirements doc: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md  # if one was created
+Requirements doc: work/items/active/<id>-<slug>/requirements.md  # if one was created
 
 Key decisions:
 - [Decision 1]
@@ -117,7 +117,7 @@ If the user pauses with `Resolve Before Planning` still populated, display:
 ```text
 Brainstorm paused.
 
-Requirements doc: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md  # if one was created
+Requirements doc: work/items/active/<id>-<slug>/requirements.md  # if one was created
 
 Planning is blocked by:
 - [Blocking question 1]

@@ -2,7 +2,7 @@
 
 Date: 2026-05-29
 Status: Accepted
-Tracks: backlog/task-005
+Tracks: ../work/items/parking-lot/01KSRGFP04Y2T9ETRWFR9Y91GZ-resolve-se-loop-ambiguity
 
 ## Context
 
@@ -65,7 +65,7 @@ goes:
   the same property via `context: "fresh"` on subagent dispatches.
 - **Durable state for resumability**: the state-store pattern (file-backed
   `.context/software-engineering/se-work-loop/`) generalizes into the SE
-  session-log substrate planned in `backlog/task-001`. The pattern is not
+  session-log substrate planned in `../work/items/parking-lot/01KSRGFP00WTNB7G4F7V3TM6TG-move-se-state-into-pi-session-log`. The pattern is not
   lost; it moves to `pi.appendEntry`.
 
 If the loop is ever re-attempted, it should:

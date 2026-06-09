@@ -17,7 +17,7 @@ This package includes:
 - a small extension that exposes packaged SE agents to `pi-subagents` through managed symlinks in `~/.pi/agent/agents`
 - an `se-review` extension that registers the `se_review_finding` tool for structured review-finding emission
 - session-log-backed SE state (`se:phase`, `se:worktree`, `se:test-state`, `se:review-finding`, `se:backlog`, ...) so runtime state survives `/compact`, `/fork`, and worktree changes
-- backlog tools (`backlog_add`, `backlog_list`, `backlog_promote`, `backlog_remove`, `backlog_export`) backed by the session log; `backlog/` is an explicit export target, not the primary store
+- backlog tools (`backlog_add`, `backlog_list`, `backlog_promote`, `backlog_remove`, `backlog_export`) backed by the session log and synced to `work/items/parking-lot/` for cross-session parked work
 - an `se_read_residuals` tool that reads the unresolved review-finding set for downstream skills (`se-work` shipping workflow, `se-resolve-pr-feedback`)
 - automatic test-runner observation: bash invocations that match the runner table (`npm test`, `pytest`, `cargo test`, `bun test`, `mise run test*`, `bin/rails test`, `go test`, `rspec`, `jest`, `vitest`, `node --test`, ...) populate `se:test-state` so downstream guardrails can refuse RED-state commits
 

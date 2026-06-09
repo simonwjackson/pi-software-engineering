@@ -17,7 +17,7 @@ This template describes the Phase 4 interactive presentation — what the user s
 ```markdown
 ## Document Review Results
 
-**Document:** docs/plans/2026-03-15-feat-user-auth-plan.md
+**Document:** work/01KT7BEG3WWXEW1CNFD7MMK5GA-user-auth/plan.md
 **Type:** plan
 **Reviewers:** coherence, feasibility, security-lens, scope-guardian
 - security-lens -- plan adds public API endpoint with auth flow

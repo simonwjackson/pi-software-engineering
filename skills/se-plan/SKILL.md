@@ -15,6 +15,24 @@ compatibility: mise, Rails
 
 This workflow produces a durable implementation plan. It does **not** implement code, run tests, or learn from execution-time results. If the answer depends on changing code and seeing what happens, that belongs in `se-work`, not here.
 
+## Work Artifact Layout
+
+SE work artifacts are organized by initiative under `work/items/active/<id>-<slug>/`, not by artifact type:
+
+```text
+work/
+├── parking-lot/<id>-<slug>.md        # ungraduated parked items
+├── <id>-<slug>/
+│   ├── work.md                       # metadata spine
+│   ├── item.md                       # optional, only when graduated from parking lot
+│   ├── requirements.md               # optional origin requirements
+│   ├── repro.md                      # optional debug reproduction
+│   └── plan.md                       # this skill's output
+└── .archive/<id>-<slug>/             # terminal work, excluded by default
+```
+
+When planning from an existing `work/items/active/<id>-<slug>/requirements.md`, write `plan.md` beside it. When planning from a parking-lot item, graduate it by moving the file to `work/items/active/<id>-<slug>/item.md`, writing `work.md`, then writing `plan.md`. When planning directly from a prompt, mint a fresh time-sortable id, create `work/items/active/<id>-<slug>/work.md`, and write `plan.md` there. Do not create `docs/plans/`, `docs/brainstorms/`, or `docs/ideation/` for SE artifacts.
+
 ## Interaction Method
 
 When asking the user a question, use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_user` in Gemini, `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
@@ -62,12 +80,12 @@ A plan is ready when an implementer can start confidently without needing the pl
 
 #### 0.1 Resume Existing Plan Work When Appropriate
 
-If the user references an existing plan file or there is an obvious recent matching plan in `docs/plans/`:
+If the user references an existing plan file or there is an obvious recent matching plan in `work/items/active/*/plan.md` (excluding `work/items/.archive/` unless the user asks for archived work):
 - Read it
 - Confirm whether to update it in place or create a new plan
 - If updating, revise only the still-relevant sections. Plans do not carry per-unit progress state — progress is derived from git by `se-work`, so there is no progress to preserve across edits
 
-**Deepen intent:** The word "deepen" (or "deepening") in reference to a plan is the primary trigger for the deepening fast path. When the user says "deepen the plan", "deepen my plan", "run a deepening pass", or similar, the target document is a **plan** in `docs/plans/`, not a requirements document. Use any path, keyword, or context the user provides to identify the right plan. If a path is provided, verify it is actually a plan document. If the match is not obvious, confirm with the user before proceeding.
+**Deepen intent:** The word "deepen" (or "deepening") in reference to a plan is the primary trigger for the deepening fast path. When the user says "deepen the plan", "deepen my plan", "run a deepening pass", or similar, the target document is a **plan** at `work/items/active/<id>-<slug>/plan.md`, not a requirements document. Use any path, keyword, or context the user provides to identify the right plan. If a path is provided, verify it is actually a plan document. If the match is not obvious, confirm with the user before proceeding.
 
 Words like "strengthen", "confidence", "gaps", and "rigor" are NOT sufficient on their own to trigger deepening. These words appear in normal editing requests ("strengthen that section about the diagram", "there are gaps in the test scenarios") and should not cause a holistic deepening pass. Only treat them as deepening intent when the request clearly targets the plan as a whole and does not name a specific section or content area to change — and even then, prefer to confirm with the user before entering the deepening flow.
 
@@ -89,7 +107,7 @@ Otherwise, read `references/universal-planning.md` and follow that workflow inst
 
 #### 0.2 Find Upstream Requirements Document
 
-Before asking planning questions, search `docs/brainstorms/` for files matching `*-requirements.md`.
+Before asking planning questions, search active work folders for `work/items/active/*/requirements.md` (exclude `work/items/.archive/` unless the user asks for archived work).
 
 **Relevance criteria:** A requirements document is relevant if:
 - The topic semantically matches the feature description
@@ -112,7 +130,7 @@ If a relevant requirements document exists:
    - Dependencies or assumptions
    - Outstanding questions, preserving whether they are blocking or deferred
 4. Use the source document as the primary input to planning and research
-5. Reference important carried-forward decisions in the plan with `(see origin: <sourse-path>)`
+5. Reference important carried-forward decisions in the plan with `(see origin: <source-path>)`
 6. Do not silently omit source content — if the origin document discussed it, the plan must address it even if briefly. Before finalizing, scan each section of the origin document to verify nothing was dropped.
 
 If no relevant requirements document exists, planning may proceed from the user's request directly.
@@ -142,11 +160,11 @@ If the bootstrap reveals that a different workflow would serve the user better:
 - **Bug-shaped prompt** (user describes broken behavior — "fix the bug where X", error message, regression, "doesn't work"). Surface `se-debug` as a route-out option alongside continuing with `se-plan` whenever the bug surface is reachable (in cwd OR named repo found at another local path). Stay in `se-plan` silently when the named code can't be found anywhere local — paper-planning is the only useful output for unreachable surfaces.
 
   **When the bug is at another local path (not cwd):**
-  - Announce the target explicitly **before** any cross-repo investigation: which path will be read AND where plan outputs will land (default: target repo's `docs/plans/`, not cwd's).
+  - Announce the target explicitly **before** any cross-repo investigation: which path will be read AND where plan outputs will land (default: target repo's `work/items/active/<id>-<slug>/plan.md`, not cwd's).
   - Default: proceed from the target repo for both investigation and plan-write. The user can interrupt to redirect (switch context, paper-plan, abandon, etc.). No location menu — the announcement makes the cross-repo nature visible, and the user can speak up if they want something unusual.
   - **After** announcing and proceeding, fire the standard se-debug routing menu (continue with `se-plan` vs switch to `se-debug`) — same shape as the in-cwd case. Cross-repo location and se-debug skill routing are orthogonal decisions; do not merge them into a single question.
 
-  Reading code at another path is fine in principle — that's just file access. The harm to avoid is silent operation on the wrong repo, especially writing the plan doc somewhere it won't be discovered (a busyblock plan landing in `cli-printing-press/docs/plans/` is a discoverability disaster). The announcement requirement makes the target visible; defaulting to the target repo for both investigation and outputs respects the user's stated intent (they named that repo); the orthogonal se-debug menu keeps the skill-choice question clean.
+  Reading code at another path is fine in principle — that's just file access. The harm to avoid is silent operation on the wrong repo, especially writing the plan doc somewhere it won't be discovered (a busyblock plan landing in another repo's `work/` tree is a discoverability disaster). The announcement requirement makes the target visible; defaulting to the target repo for both investigation and outputs respects the user's stated intent (they named that repo); the orthogonal se-debug menu keeps the skill-choice question clean.
 
   The accessibility classification is conservative and may under-suggest in monorepos, dependency bugs, or after renames. Users can always invoke `/se-debug` manually.
 
@@ -326,12 +344,12 @@ Ask the user only when the answer materially affects architecture, scope, sequen
 
 - Draft a clear, searchable title using conventional format such as `feat: Add user authentication` or `fix: Prevent checkout double-submit`
 - Determine the plan type: `feat`, `fix`, or `refactor`
-- Build the filename following the repository convention: `docs/plans/YYYY-MM-DD-NNN-<type>-<descriptive-name>-plan.md`
-  - Create `docs/plans/` if it does not exist
-  - Check existing files for today's date to determine the next sequence number (zero-padded to 3 digits, starting at 001)
-  - Keep the descriptive name concise (3-5 words) and kebab-cased
-  - Examples: `2026-01-15-001-feat-user-authentication-flow-plan.md`, `2026-02-03-002-fix-checkout-rase-condition-plan.md`
-  - Avoid: missing sequence numbers, vague names like "new-feature", invalid characters (colons, spaces)
+- Build the target path following the work layout:
+  - Existing work folder: write `work/items/active/<id>-<slug>/plan.md` beside the origin artifact.
+  - Parking-lot item: graduate `work/items/parking-lot/<id>-<slug>.md` to `work/items/active/<id>-<slug>/item.md`, write `work.md`, then write `plan.md`.
+  - Direct prompt: mint a fresh time-sortable id, create `work/items/active/<id>-<slug>/work.md`, then write `work/items/active/<id>-<slug>/plan.md`.
+  - Keep the folder slug concise (3-5 words) and kebab-cased; the id is the durable reference and the slug is cosmetic.
+  - Avoid: date/sequence filenames, counters, vague slugs like "new-feature", invalid characters (colons, spaces), and any output under `docs/plans/`.
 
 #### 3.2 Stakeholder and Impact Awareness
 
@@ -494,7 +512,7 @@ title: [Plan Title]
 type: [feat|fix|refactor]
 status: active
 date: YYYY-MM-DD
-origin: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md  # include when planning from a requirements doc
+origin: work/items/active/<id>-<slug>/requirements.md  # include when planning from a requirements doc
 deepened: YYYY-MM-DD  # optional, set when the confidence check substantively strengthens the plan
 verify_command: "<command>"  # optional. Concrete completion gate (e.g. "node --test", "mise run ci", "bin/rails test") that downstream automation can run after each implementation unit. Authoring it here makes the verification surface explicit and reusable across se-work, plan-deepening, and any future loop drivers.
 ---
@@ -713,7 +731,7 @@ verify_command: "<command>"  # optional. Concrete completion gate (e.g. "node --
 
 ## Sources & References
 
-- **Origin document:** [docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md](path)
+- **Origin document:** [work/items/active/<id>-<slug>/requirements.md](path)
 - Related code: [path or symbol]
 - Related PRs/issues: #[number]
 - External docs: [url]
@@ -831,7 +849,7 @@ Fires **only when the plan was sourced from an upstream brainstorm doc** (Phase 
 Use the Write tool to save the complete plan to:
 
 ```text
-docs/plans/YYYY-MM-DD-NNN-<type>-<descriptive-name>-plan.md
+work/items/active/<id>-<slug>/plan.md
 ```
 
 Confirm (use absolute path so the reference is clickable in modern terminals):

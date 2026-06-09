@@ -43,4 +43,4 @@ When analyzing, consider:
 
 Your insights should help developers understand not just what the code does, but why it evolved to its current state, informing better decisions for future changes.
 
-Note that files in `docs/plans/` and `docs/solutions/` are software-engineering pipeline artifacts created by `/se-plan`. They are intentional, permanent living documents — do not recommend their removal or characterize them as unnecessary.
+Note that files in `work/items/active/*/plan.md`, `work/items/active/*/requirements.md`, and `docs/solutions/` are software-engineering pipeline artifacts created by `/se-plan`, `/se-brainstorm`, and `/se-compound`. They are intentional, permanent living documents — do not recommend their removal or characterize them as unnecessary.

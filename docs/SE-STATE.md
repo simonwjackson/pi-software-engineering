@@ -2,14 +2,14 @@
 
 The SE skills suite stores runtime state in the **Pi session log** via
 `pi.appendEntry`, not in scratch files under `.context/software-engineering/`
-or tracked markdown files like `Backlog.md`.
+or ad-hoc tracked markdown files like `Backlog.md`.
 
 ## Why
 
 Pi's session log survives `/compact`, `/fork`, restart, and worktree changes.
 The model only reads entries that a tool deliberately surfaces — they don't
 count against context budget. Worktree merge conflicts on SE files disappear
-because the SE files don't exist.
+for runtime-only state disappear because those SE files don't exist. Parked backlog work is the documented exception and syncs to `work/items/parking-lot/`.
 
 ## Entry-type catalogue
 
@@ -62,9 +62,9 @@ intentionally the cross-session source of truth.
 `readBacklogDir`) that the `backlog_add` / `backlog_promote` /
 `backlog_remove` tools call after they append the session-log entry. The
 result: items captured in one session are immediately visible to other
-sessions that read `backlog/`. `backlog_list` merges the current session
-log with `readBacklogDir(...)` so cross-session items appear without
-requiring an explicit export.
+sessions that read `work/items/parking-lot/`. `backlog_list` merges the current
+session log with `readBacklogDir(...)` so cross-session items appear
+without requiring an explicit export.
 
 This is **not a precedent** for moving other `se:*` state to disk. The
 rest of the catalogue (`se:phase`, `se:worktree`, `se:test-state`,
@@ -76,8 +76,8 @@ to deliver without disk sync.
 
 The `backlog_export` tool remains available for bulk re-render / repair
 (e.g. after manually editing entries or pulling from another machine).
-`backlog/.next-id` is updated by every `backlog_add` that allocates a new
-id, in addition to the existing per-call update in `backlog_export`.
+There is no `.next-id`: parked work uses coordination-free ULIDs so
+parallel worktrees never share an allocator.
 
 ## Adding a new SE state type
 
@@ -94,7 +94,7 @@ id, in addition to the existing per-call update in `backlog_export`.
 
 - Durable knowledge — that's `docs/solutions/` via `se-compound`.
 - Strategy / direction — that's `STRATEGY.md` via `se-strategy`.
-- Plan artifacts — plans live as committed markdown files; only plan-draft
-  state (in-progress interview answers) belongs in the log.
+- Plan artifacts — plans live as committed `work/items/active/<id>-<slug>/plan.md` files;
+  only plan-draft state (in-progress interview answers) belongs in the log.
 - Secrets — entries are persisted to disk under the session jsonl path and
   can be replayed by anyone with read access.

@@ -2,7 +2,7 @@
 
 Date: 2026-05-30
 Status: Accepted
-Tracks: backlog/task-003 (J5 — selective skip with rationale)
+Tracks: ../work/items/parking-lot/01KSRGFP02WJBDFB4RCWC1ABM8-lift-scripty-skills-to-pi-tools (J5 — selective skip with rationale)
 
 ## Context
 
@@ -75,7 +75,7 @@ right tool surface (`agent-browser` CLI / XcodeBuildMCP MCP tools).
 
 ## Related
 
-- `backlog/task-003 - lift-scripty-skills-to-pi-tools.md`
+- `../work/items/parking-lot/01KSRGFP02WJBDFB4RCWC1ABM8-lift-scripty-skills-to-pi-tools - lift-scripty-skills-to-pi-tools.md`
 - `extensions/se-tools/` (the lifted wrappers)
 - `skills/se-test-browser/SKILL.md` (unchanged by this decision)
 - `skills/se-test-xcode/SKILL.md` (unchanged by this decision)

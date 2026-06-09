@@ -228,7 +228,7 @@ Before finalizing:
 
 If planning would need to invent product behavior, scope boundaries, or success criteria, the brainstorm is not complete yet.
 
-Ensure `docs/brainstorms/` directory exists before writing.
+Ensure a `work/items/active/<id>-<slug>/` folder exists before writing; create `work.md` when this brainstorm is the first artifact for the initiative.
 
 ## Outstanding questions guidance
 

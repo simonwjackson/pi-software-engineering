@@ -59,7 +59,7 @@ When the user picks an option in Phase 6 that requires a durable record (Open an
 
 | Action | Repo mode default | Elsewhere mode default |
 |---|---|---|
-| Save | `docs/ideation/YYYY-MM-DD-<topic>-ideation.md` | Proof |
+| Save | `work/items/parking-lot/<id>-<slug>.md` | Proof |
 | Share | Proof (additional) | Proof (primary) |
 | Brainstorm handoff | `se-brainstorm` | `se-brainstorm` (universal-brainstorming) |
 | End | Conversation only is fine | Conversation only is fine |
@@ -68,16 +68,21 @@ Either mode can also use the other destination on explicit request ("save to Pro
 
 ### 5.1 File Save (default for repo mode; on request for elsewhere mode)
 
-1. Ensure `docs/ideation/` exists
+1. Ensure `work/items/parking-lot/` exists
 2. Choose the file path:
-   - `docs/ideation/YYYY-MM-DD-<topic>-ideation.md`
-   - `docs/ideation/YYYY-MM-DD-open-ideation.md` when no focus exists
+   - `work/items/parking-lot/<id>-<slug>.md`
+   - `work/items/parking-lot/<id>-open-ideation.md` when no focus exists
 3. Write or update the ideation document
 
 Use this structure and omit clearly irrelevant fields only when necessary:
 
 ```markdown
 ---
+id: <time-sortable-id>
+slug: <kebab-case-topic>
+title: <human-readable topic>
+origin: ideated
+status: To Do
 date: YYYY-MM-DD
 topic: <kebab-case-topic>
 focus: <optional focus hint>
@@ -113,7 +118,7 @@ If resuming:
 
 ### 5.2 Proof Save (default for elsewhere mode; on request for repo mode)
 
-Hand off the ideation content to the `se-proof` skill in HITL review mode. This uploads the doc, runs an iterative review loop (user annotates in Proof, agent ingests feedback and applies tracked edits), and (in repo mode) syncs the reviewed markdown back to `docs/ideation/`.
+Hand off the ideation content to the `se-proof` skill in HITL review mode. This uploads the doc, runs an iterative review loop (user annotates in Proof, agent ingests feedback and applies tracked edits), and (in repo mode) syncs the reviewed markdown back to `work/items/parking-lot/`.
 
 Load the `se-proof` skill in HITL-review mode with:
 
@@ -148,7 +153,7 @@ Ask what should happen next using the platform's blocking question tool: `AskUse
 Offer these four options (labels are self-contained with the distinguishing word front-loaded so options stay distinct when truncated):
 
 1. **Refine the ideation in conversation (or stop here — no save)** — add ideas, re-evaluate, or deepen analysis. No file or network side effects; ending the conversation at any point after this pick is a valid no-save exit.
-2. **Open and iterate in Proof** — save the ideation to Proof and enter the proof skill's HITL review loop: iterate via comments in the Proof editor; reviewed edits sync back to `docs/ideation/` in repo mode.
+2. **Open and iterate in Proof** — save the ideation to Proof and enter the proof skill's HITL review loop: iterate via comments in the Proof editor; reviewed edits sync back to `work/items/parking-lot/` in repo mode.
 3. **Brainstorm a selected idea** — load `se-brainstorm` with the chosen idea as the seed. The orchestrator first writes a durable record using the mode default in Phase 5.
 4. **Save and end** — persist the ideation using the mode default (file in repo mode, Proof in elsewhere mode), then end.
 
@@ -214,7 +219,7 @@ Distinguish create-failure from ops-failure by inspecting whether the proof skil
 
 **Fallback menu after persistent failure.** Use the platform's blocking question tool. Present these options (omit option (a) if no repo exists at CWD):
 
-- "Save to `docs/ideation/` instead" (repo-mode default destination, available when CWD is inside a git repo)
+- "Save to `work/items/parking-lot/` instead" (repo-mode default destination, available when CWD is inside a git repo)
 - "Save to a custom path the user provides" (validate writable; create parent dirs)
 - "Skip save and keep the ideation in conversation" (no persistence)
 

@@ -58,7 +58,7 @@ Based on selection (the bare per-option routing is also stated inline in the SKI
 - **Run deeper doc review** -> Re-invoke the `se-doc-review` skill on the plan path **without** `mode:headless` so the interactive routing question and walkthrough fire. The headless pass already applied `safe_auto` fixes and recorded its findings in the session, so the interactive pass picks up where headless stopped — its R29 suppression rule prevents prior-round Skipped/Deferred entries from re-raising. After it returns, re-render this menu with the refreshed counts so the user can pick what to do next.
 - **Create Issue** -> Follow the Issue Creation section below
 - **Open in Proof (web app) — review and comment to iterate with the agent** -> Load the `se-proof` skill in HITL-review mode with:
-  - source file: `docs/plans/<plan_filename>.md`
+  - source file: `work/items/active/<id>-<slug>/plan.md`
   - doc title: `Plan: <plan title from frontmatter>`
   - identity: `ai:software-engineering` / `Software Engineering`
   - recommended next step: `/se-work` (shown in the se-proof skill's final terminal output)

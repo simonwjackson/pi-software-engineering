@@ -10,7 +10,7 @@ Use this path when the input is a longer recording (over ~60 seconds), contains 
    python scripts/analyze_riffrec_zip.py /path/to/input
    ```
 
-   Use `--output-dir <dir>` when the artifact should live somewhere specific. In a repo with `docs/brainstorms/`, the default output goes under `docs/brainstorms/riffrec-feedback/`.
+   Use `--output-dir <dir>` when the artifact should live somewhere specific. In a repo with `work/`, the default output goes into a new or matching `work/items/active/<id>-riffrec-feedback>/` folder.
 
 2. Read the generated `analysis.md`, `problem-analysis.md`, `review-prompt.md`, and `requirements-kickoff.md`.
 
@@ -50,7 +50,7 @@ Do not end the workflow after extraction in normal use. The intended sequence is
 3. Inspect or refine `problem-analysis.md` when the evidence needs human-visible interpretation.
 4. Load the `se-brainstorm` skill with `requirements-kickoff.md`.
 5. Ask the user to confirm, correct, or regroup the captured requirements.
-6. Let `se-brainstorm` produce the durable requirements doc under `docs/brainstorms/`.
+6. Let `se-brainstorm` produce the durable requirements doc as `work/items/active/<id>-<slug>/requirements.md`.
 
 Only stop after step 1 or 2 when the user asks specifically for raw artifacts, transcript, screenshots, or analysis without brainstorming.
 

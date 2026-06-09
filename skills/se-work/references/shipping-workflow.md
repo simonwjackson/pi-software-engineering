@@ -141,7 +141,7 @@ This file contains the shipping workflow (Phase 3-4). It is loaded when all Phas
    inputs: { id: <task-id>, reason: "Completed and locally integrated in <commit-or-branch>" }
    ```
 
-   If the tool is unavailable, delete the matching `backlog/<task-id> - <slug>.md` file in the same atomic commit as the final workflow cleanup and mention the removal in the final summary. Do not remove unrelated backlog items. If the completed work produced durable lessons, first capture them with `se-compound`; the backlog item is not the long-term record.
+   If the tool is unavailable, delete the matching `work/items/parking-lot/<id>-<slug>.md` file for ungraduated parked work in the same atomic commit as the final workflow cleanup and mention the removal in the final summary. For graduated work, archive the whole `work/items/active/<id>-<slug>/` folder to `work/items/.archive/<id>-<slug>/` with a terminal reason in `work.md`. Do not remove unrelated parked items. If the completed work produced durable lessons, first capture them with `se-compound`; the backlog item is not the long-term record.
 
 7. **Optional PR Publication Addendum**
 
