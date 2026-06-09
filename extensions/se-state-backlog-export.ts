@@ -1,23 +1,17 @@
 /**
- * Backlog on-disk export.
+ * Parking-lot disk sync for backlog items.
  *
- * The session log is the source of truth for backlog items at runtime; this
- * module renders the active items to `backlog/task-NNN - <slug>.md` on
- * demand, preserving the existing on-disk format for portability and
- * Git-based audit. Export is a deliberate user-triggered action — never
- * background churn.
- *
- * `backlog/.next-id` continues to be the source of truth for ID allocation
- * **at export time**: if the file's value is higher than any id seen in the
- * log, that floor is honoured for the next allocation.
+ * The session log is the runtime source of truth, and `work/items/parking-lot/` is
+ * the cross-session, Git-tracked storage view for ungraduated parked work.
+ * Each item is one standard front-matter markdown file named
+ * `<ulid>-<slug>.md`; no `.next-id`, no counter, no shared parking-lot file.
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import type { BacklogItemPayload, BacklogStatus } from "./se-state.ts"
 
-const DEFAULT_DIR = "backlog"
-const NEXT_ID_FILE = ".next-id"
+const DEFAULT_DIR = "work/items/parking-lot"
 
 function slug(s: string): string {
   return s
@@ -51,7 +45,9 @@ export function renderBacklogMarkdown(item: BacklogItemPayload): string {
   const fm: string[] = []
   fm.push("---")
   fm.push(`id: ${item.id}`)
+  fm.push(`slug: ${slug(item.title)}`)
   fm.push(`title: ${yamlString(item.title)}`)
+  fm.push("origin: parked")
   fm.push(`status: ${yamlStatus(item.status)}`)
   fm.push(`priority: ${item.priority ?? "medium"}`)
   fm.push(`labels:${yamlList(item.labels, 2)}`)
@@ -116,21 +112,22 @@ function yamlStatus(s: string): string {
 }
 
 export function backlogFilename(item: BacklogItemPayload): string {
-  return `${item.id} - ${slug(item.title)}.md`
+  return `${item.id}-${slug(item.title)}.md`
 }
 
 export interface ExportResult {
   dir: string
   written: string[]
   skipped: string[]
-  nextId: string
+  nextId: string | null
 }
 
 /**
- * Write each active item to `<dir>/task-NNN - <slug>.md`. Files that
- * already exist are overwritten only when `overwrite: true`.
+ * Write each active item to `<dir>/<ulid>-<slug>.md`. Files that already
+ * exist are overwritten only when `overwrite: true`.
  *
- * Returns the list of paths written and the new value of `<dir>/.next-id`.
+ * Returns the list of paths written. `nextId` is always null because the
+ * work layout uses coordination-free ULIDs instead of a counter.
  */
 export function exportBacklog(
   items: BacklogItemPayload[],
@@ -144,21 +141,6 @@ export function exportBacklog(
   const written: string[] = []
   const skipped: string[] = []
 
-  let maxN = 0
-  if (existsSync(resolve(dir, NEXT_ID_FILE))) {
-    const raw = readFileSync(resolve(dir, NEXT_ID_FILE), "utf8").trim()
-    const n = parseInt(raw, 10)
-    if (Number.isFinite(n) && n > 0) maxN = Math.max(maxN, n - 1)
-  }
-
-  // Honor any pre-existing files: their ids are claimed even if not in the log.
-  if (existsSync(dir)) {
-    for (const name of readdirSync(dir)) {
-      const m = /^task-(\d+)\s*-/i.exec(name)
-      if (m) maxN = Math.max(maxN, parseInt(m[1], 10))
-    }
-  }
-
   for (const item of items) {
     const name = backlogFilename(item)
     const filePath = resolve(dir, name)
@@ -168,46 +150,22 @@ export function exportBacklog(
     }
     writeFileSync(filePath, renderBacklogMarkdown(item))
     written.push(filePath)
-    const m = /^task-(\d+)$/.exec(item.id)
-    if (m) maxN = Math.max(maxN, parseInt(m[1], 10))
   }
 
-  const nextN = maxN + 1
-  writeFileSync(resolve(dir, NEXT_ID_FILE), String(nextN) + "\n")
-  return {
-    dir,
-    written,
-    skipped,
-    nextId: `task-${nextN.toString().padStart(3, "0")}`,
-  }
+  return { dir, written, skipped, nextId: null }
 }
 
-/**
- * Read `backlog/.next-id` and return the integer floor for allocation.
- * 0 if unreadable or missing.
- */
-export function readNextIdFloor(opts: { dir?: string; cwd?: string } = {}): number {
-  const cwd = opts.cwd ?? process.cwd()
-  const dir = resolve(cwd, opts.dir ?? DEFAULT_DIR)
-  const path = resolve(dir, NEXT_ID_FILE)
-  if (!existsSync(path)) return 0
-  try {
-    const raw = readFileSync(path, "utf8").trim()
-    const n = parseInt(raw, 10)
-    return Number.isFinite(n) && n > 0 ? n : 0
-  } catch {
-    return 0
-  }
+/** Historical compatibility no-op. ULID allocation has no counter floor. */
+export function readNextIdFloor(_opts: { dir?: string; cwd?: string } = {}): number {
+  return 0
 }
 
 // ---------------------------------------------------------------------------
-// Cross-session sync: single-file write / patch / delete (task-017).
+// Cross-session sync: one file per parked item in `work/items/parking-lot/`.
 //
 // The session log remains the per-session runtime substrate, but every
-// backlog mutation also touches the on-disk `backlog/<id> - <slug>.md`
-// file so that a different session reading `backlog/` sees the same state.
-// `backlog_list` reads disk via `readBacklogDir` to make cross-session
-// items visible without requiring an explicit `backlog_export`.
+// backlog mutation also touches the on-disk parking-lot file so a different
+// session sees the same ungraduated work without requiring explicit export.
 // ---------------------------------------------------------------------------
 
 function backlogDirPath(opts: { dir?: string; cwd?: string }): string {
@@ -217,7 +175,7 @@ function backlogDirPath(opts: { dir?: string; cwd?: string }): string {
 
 function findFileById(dir: string, id: string): string | undefined {
   if (!existsSync(dir)) return undefined
-  const prefix = `${id} - `
+  const prefix = `${id}-`
   for (const name of readdirSync(dir)) {
     if (name.startsWith(prefix) && name.endsWith(".md")) {
       return resolve(dir, name)
@@ -226,27 +184,10 @@ function findFileById(dir: string, id: string): string | undefined {
   return undefined
 }
 
-function bumpNextIdFile(dir: string, id: string): void {
-  const m = /^task-(\d+)$/.exec(id)
-  if (!m) return
-  const n = parseInt(m[1], 10)
-  const path = resolve(dir, NEXT_ID_FILE)
-  let current = 0
-  if (existsSync(path)) {
-    try {
-      current = parseInt(readFileSync(path, "utf8").trim(), 10) || 0
-    } catch {
-      current = 0
-    }
-  }
-  const next = Math.max(current, n + 1)
-  writeFileSync(path, String(next) + "\n")
-}
-
 /**
- * Write a single backlog item to `<dir>/<id> - <slug>.md`, overwriting any
+ * Write a single backlog item to `<dir>/<id>-<slug>.md`, overwriting any
  * existing file for the same id (filename slug may change if the title
- * changed; the old file is removed in that case). Updates `.next-id`.
+ * changed; the old file is removed in that case).
  */
 export function writeBacklogItem(
   item: BacklogItemPayload,
@@ -265,7 +206,6 @@ export function writeBacklogItem(
     }
   }
   writeFileSync(target, renderBacklogMarkdown(item))
-  bumpNextIdFile(dir, item.id)
   return target
 }
 
@@ -419,8 +359,8 @@ function parseStatus(s: string): BacklogStatus | undefined {
 }
 
 /**
- * Enumerate `backlog/task-NNN - *.md` files in `<cwd>/<dir>` and return
- * their parsed frontmatter as `BacklogItemPayload` items.
+ * Enumerate parking-lot markdown files in `<cwd>/<dir>` and return their
+ * parsed frontmatter as `BacklogItemPayload` items.
  *
  * Files that fail to parse are skipped silently — this is a best-effort
  * cross-session read, not a strict validator.
@@ -432,7 +372,7 @@ export function readBacklogDir(
   if (!existsSync(dir)) return []
   const out: BacklogItemPayload[] = []
   for (const name of readdirSync(dir)) {
-    if (!/^task-\d+\s*-.*\.md$/i.test(name)) continue
+    if (!name.endsWith(".md")) continue
     try {
       const content = readFileSync(resolve(dir, name), "utf8")
       const item = parseBacklogFrontmatter(content)

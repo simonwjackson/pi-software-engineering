@@ -6,19 +6,20 @@
  * extension (it has no default export); it's a shared utility imported by
  * extensions/software-engineering.ts and extensions/se-review.ts.
  *
- * Design (see backlog/task-001):
+ * Design: append-only session log plus `work/items/parking-lot/` disk sync for parked work.
  *
  * - Session log is the source of truth for SE runtime state. No
  *   .context/software-engineering/ scratch files.
  * - All entries are append-only. The "current value" is derived by reading
  *   newest-to-oldest and stopping at the first matching record.
- * - Backlog items live in the log; the on-disk backlog/ directory is an
- *   export target reached via backlog_export, never the primary store.
+ * - Backlog items live in the log; the on-disk `work/items/parking-lot/` directory
+ *   is the cross-session parking-lot view for ungraduated work.
  *
  * Reference: docs/SE-STATE.md
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent"
+import { mintId } from "./work-items.ts"
 
 // ---------------------------------------------------------------------------
 // Entry-type catalogue
@@ -170,7 +171,7 @@ export function getLastTestState(ctx: ExtensionContext): TestStateEntry | undefi
 export type BacklogStatus = "to-do" | "in-progress" | "done"
 
 export interface BacklogItemPayload {
-  /** Stable id (e.g. "task-001"). */
+  /** Stable time-sortable work id (ULID). */
   id: string
   title: string
   status: BacklogStatus
@@ -247,24 +248,14 @@ export function readBacklogActive(ctx: ExtensionContext): BacklogItemPayload[] {
 }
 
 /**
- * Allocate the next monotonic id. Uses the highest known id across active
- * AND removed entries so removed ids are never reissued.
+ * Mint a coordination-free time-sortable id for parked work.
+ *
+ * The historical `floor` parameter is intentionally ignored: work items use
+ * ULIDs rather than repo-local counters, so concurrent worktrees never fight
+ * over `.next-id` or a max-scan allocation.
  */
-export function nextBacklogId(ctx: ExtensionContext, floor?: number): string {
-  const all = readAllSE<BacklogItemPayload>(ctx, SE_ENTRY_TYPES.BACKLOG)
-  const removed = readAllSE<BacklogRemovedEntry>(ctx, SE_ENTRY_TYPES.BACKLOG_REMOVED)
-  let max = floor && floor > 0 ? floor - 1 : 0
-  const idPattern = /^task-(\d+)$/
-  for (const item of all) {
-    const m = idPattern.exec(item.id)
-    if (m) max = Math.max(max, parseInt(m[1], 10))
-  }
-  for (const r of removed) {
-    const m = idPattern.exec(r.id)
-    if (m) max = Math.max(max, parseInt(m[1], 10))
-  }
-  const next = max + 1
-  return `task-${next.toString().padStart(3, "0")}`
+export function nextBacklogId(_ctx: ExtensionContext, _floor?: number): string {
+  return mintId()
 }
 
 export function addBacklog(

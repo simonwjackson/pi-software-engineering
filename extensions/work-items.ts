@@ -1,5 +1,5 @@
 /**
- * Work-item lifecycle: colocated `work/<id>-<slug>/` folders keyed by a
+ * Work-item lifecycle: colocated `work/items/active/<id>-<slug>/` folders keyed by a
  * time-sortable ULID. Implements decisions/2026-06-02-colocated-work-item-layout.md.
  *
  * Coordination-free by construction: ids are minted, never counted, so
@@ -125,8 +125,8 @@ export function parseWorkMd(text: string): WorkItemMeta {
 // Lifecycle operations over a repo root's work/ tree.
 // ---------------------------------------------------------------------------
 
-export const ACTIVE_DIR = "work"
-export const ARCHIVE_DIR = "work/.archive"
+export const ACTIVE_DIR = "work/items/active"
+export const ARCHIVE_DIR = "work/items/.archive"
 
 const folderName = (meta: Pick<WorkItemMeta, "id" | "slug">) => `${meta.id}-${meta.slug}`
 
@@ -170,13 +170,12 @@ async function isDir(p: string): Promise<boolean> {
   }
 }
 
-/** List active work-items (work/* excluding the .archive directory). */
+/** List active work-items (work/items/active/*). */
 export async function listActive(root: string): Promise<WorkItemMeta[]> {
   const base = join(root, ACTIVE_DIR)
   if (!(await isDir(base))) return []
   const out: WorkItemMeta[] = []
   for (const entry of await readdir(base)) {
-    if (entry.startsWith(".")) continue // excludes .archive and dotfiles
     try {
       out.push(parseWorkMd(await readFile(join(base, entry, "work.md"), "utf8")))
     } catch {

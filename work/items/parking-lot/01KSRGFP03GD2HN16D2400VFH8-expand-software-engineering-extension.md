@@ -1,6 +1,9 @@
 ---
-id: task-004
+id: 01KSRGFP03GD2HN16D2400VFH8
+slug: expand-software-engineering-extension
 title: Expand `software-engineering.ts` into a real SE control plane
+origin: parked
+legacy: task-004
 status: To Do
 priority: medium
 labels:
@@ -11,11 +14,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Expand `software-engineering.ts` into a real SE control plane

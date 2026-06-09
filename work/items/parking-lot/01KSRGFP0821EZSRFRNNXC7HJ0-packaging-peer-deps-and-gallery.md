@@ -1,6 +1,9 @@
 ---
-id: task-009
+id: 01KSRGFP0821EZSRFRNNXC7HJ0
+slug: packaging-peer-deps-and-gallery
 title: Packaging fixes — peer-dep namespace migration and gallery card metadata
+origin: parked
+legacy: task-009
 status: To Do
 priority: low
 labels:
@@ -10,11 +13,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Packaging fixes — peer-dep namespace migration and gallery card metadata

@@ -1,6 +1,9 @@
 ---
-id: task-011
+id: 01KSRGFP0A6YR2HJ21Z0WZ5M6V
+slug: inject-se-state-via-before-agent-start
 title: Inject SE state into every turn via `before_agent_start`
+origin: parked
+legacy: task-011
 status: To Do
 priority: medium
 labels:
@@ -11,11 +14,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Inject SE state into every turn via `before_agent_start`

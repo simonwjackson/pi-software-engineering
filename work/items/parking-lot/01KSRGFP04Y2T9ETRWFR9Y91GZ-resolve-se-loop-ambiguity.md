@@ -1,6 +1,9 @@
 ---
-id: task-005
+id: 01KSRGFP04Y2T9ETRWFR9Y91GZ
+slug: resolve-se-loop-ambiguity
 title: Resolve the `se-loop` extension/skill ambiguity
+origin: parked
+legacy: task-005
 status: To Do
 priority: medium
 labels:
@@ -10,11 +13,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Resolve the `se-loop` extension/skill ambiguity

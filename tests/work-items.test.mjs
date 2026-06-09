@@ -85,7 +85,7 @@ test("listActive: returns active items, excludes .archive and folders without wo
   try {
     await openWorkItem(root, { title: "First thing", origin: "planned", now: 1 })
     await openWorkItem(root, { title: "Second thing", origin: "debugged", now: 2 })
-    mkdirSync(join(root, "work", "not-a-work-item"), { recursive: true })
+    mkdirSync(join(root, "work", "items", "active", "not-a-work-item"), { recursive: true })
     const active = await listActive(root)
     assert.deepEqual(
       active.map((m) => m.title),
@@ -102,7 +102,7 @@ test("close: flips status+reason, moves to .archive, drops from active list", as
     const { meta } = await openWorkItem(root, { title: "Shippable feature", origin: "brainstormed" })
     const archived = await closeWorkItem(root, meta.id, { status: "shipped", reason: "merged to main" })
     assert.equal((await listActive(root)).length, 0)
-    assert.equal(exists(join(root, "work", `${meta.id}-shippable-feature`)), false)
+    assert.equal(exists(join(root, "work", "items", "active", `${meta.id}-shippable-feature`)), false)
     const archivedMeta = parseWorkMd(readFileSync(join(archived, "work.md"), "utf8"))
     assert.equal(archivedMeta.status, "shipped")
     assert.equal(archivedMeta.reason, "merged to main")
@@ -129,7 +129,7 @@ test("id is retired: archived ids remain discoverable so they are never reused",
   try {
     const { meta } = await openWorkItem(root, { title: "Old work", origin: "parked" })
     await closeWorkItem(root, meta.id, { status: "dropped", reason: "obsolete" })
-    const archived = readdirSync(join(root, "work", ".archive"))
+    const archived = readdirSync(join(root, "work", "items", ".archive"))
     assert.ok(archived.some((e) => e.startsWith(`${meta.id}-`)))
   } finally {
     rmSync(root, { recursive: true, force: true })

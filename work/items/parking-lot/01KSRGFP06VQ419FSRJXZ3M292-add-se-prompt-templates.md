@@ -1,6 +1,9 @@
 ---
-id: task-007
+id: 01KSRGFP06VQ419FSRJXZ3M292
+slug: add-se-prompt-templates
 title: Add SE prompt templates for the common entry points
+origin: parked
+legacy: task-007
 status: To Do
 priority: low
 labels:
@@ -10,11 +13,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Add SE prompt templates for the common entry points

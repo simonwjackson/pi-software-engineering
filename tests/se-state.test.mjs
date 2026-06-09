@@ -79,7 +79,7 @@ test("software-engineering.ts replays SE state on session_start", () => {
 test("backlog export round-trip: rendered markdown round-trips the canonical fields", async () => {
   const mod = await import("../extensions/se-state-backlog-export.ts")
   const item = {
-    id: "task-007",
+    id: "01KT7BEG3WWXEW1CNFD7MMK5GA",
     title: "Park gnarly thing",
     status: "to-do",
     priority: "high",
@@ -93,7 +93,9 @@ test("backlog export round-trip: rendered markdown round-trips the canonical fie
     context: { branch: "feat/foo", commit: "abc1234" },
   }
   const md = mod.renderBacklogMarkdown(item)
-  assert.match(md, /^---\nid: task-007\n/)
+  assert.match(md, /^---\nid: 01KT7BEG3WWXEW1CNFD7MMK5GA\n/)
+  assert.match(md, /slug: park-gnarly-thing/)
+  assert.match(md, /origin: parked/)
   assert.match(md, /title: Park gnarly thing/)
   assert.match(md, /status: To Do/)
   assert.match(md, /priority: high/)
@@ -110,15 +112,15 @@ test("backlog export round-trip: rendered markdown round-trips the canonical fie
   assert.match(md, /## Notes/)
 })
 
-test("backlogFilename uses task-id + slug + .md", async () => {
+test("backlogFilename uses work id + slug + .md", async () => {
   const mod = await import("../extensions/se-state-backlog-export.ts")
   const name = mod.backlogFilename({
-    id: "task-042",
+    id: "01KT7BEG3WWXEW1CNFD7MMK5GA",
     title: "Refactor the Whatsit module: phase 2",
     status: "to-do",
     createdAt: "2026-01-01T00:00:00.000Z",
   })
-  assert.equal(name, "task-042 - refactor-the-whatsit-module-phase-2.md")
+  assert.equal(name, "01KT7BEG3WWXEW1CNFD7MMK5GA-refactor-the-whatsit-module-phase-2.md")
 })
 
 test("se-state read/write round-trip via an in-memory sessionManager mock", async () => {
@@ -142,41 +144,43 @@ test("se-state read/write round-trip via an in-memory sessionManager mock", asyn
 
   // backlog: allocation, list, promote, remove
   const item1 = mod.addBacklog(fakePi, fakeCtx, { title: "First", status: "to-do" })
-  assert.equal(item1.id, "task-001")
+  assert.match(item1.id, /^[0-9A-HJKMNP-TV-Z]{26}$/)
   const item2 = mod.addBacklog(fakePi, fakeCtx, { title: "Second", status: "to-do" })
-  assert.equal(item2.id, "task-002")
+  assert.match(item2.id, /^[0-9A-HJKMNP-TV-Z]{26}$/)
+  assert.notEqual(item1.id, item2.id)
 
   let active = mod.readBacklogActive(fakeCtx)
   assert.equal(active.length, 2)
 
-  mod.promoteBacklog(fakePi, "task-001", "se-work")
+  mod.promoteBacklog(fakePi, item1.id, "se-work")
   active = mod.readBacklogActive(fakeCtx)
-  assert.equal(active.find(i => i.id === "task-001").status, "in-progress")
+  assert.equal(active.find(i => i.id === item1.id).status, "in-progress")
 
-  mod.removeBacklog(fakePi, "task-002", "no longer needed")
+  mod.removeBacklog(fakePi, item2.id, "no longer needed")
   active = mod.readBacklogActive(fakeCtx)
   assert.equal(active.length, 1)
-  assert.equal(active[0].id, "task-001")
+  assert.equal(active[0].id, item1.id)
 
-  // Removed id is never reused.
+  // Removed ids are not reused because every add mints a fresh ULID.
   const item3 = mod.addBacklog(fakePi, fakeCtx, { title: "Third", status: "to-do" })
-  assert.equal(item3.id, "task-003")
+  assert.match(item3.id, /^[0-9A-HJKMNP-TV-Z]{26}$/)
+  assert.notEqual(item3.id, item2.id)
 
-  // Floor honours .next-id values higher than seen ids.
+  // Counter floors are ignored in the work layout; IDs remain ULIDs.
   const item4 = mod.addBacklog(fakePi, fakeCtx, { title: "Fourth", status: "to-do" }, 100)
-  assert.equal(item4.id, "task-100")
+  assert.match(item4.id, /^[0-9A-HJKMNP-TV-Z]{26}$/)
 })
 
 // ---------------------------------------------------------------------------
-// task-017: cross-session backlog visibility via auto-export on mutation.
+// Cross-session backlog visibility via work/items/parking-lot disk sync.
 // ---------------------------------------------------------------------------
 
-test("writeBacklogItem renders frontmatter and bumps .next-id", async () => {
+test("writeBacklogItem renders a parking-lot file", async () => {
   const mod = await import("../extensions/se-state-backlog-export.ts")
   const cwd = mkTmpRepo()
   try {
     const item = {
-      id: "task-007",
+      id: "01KT7BEG3WWXEW1CNFD7MMK5GA",
       title: "Park gnarly thing",
       status: "to-do",
       priority: "high",
@@ -186,10 +190,11 @@ test("writeBacklogItem renders frontmatter and bumps .next-id", async () => {
     const path = mod.writeBacklogItem(item, { cwd })
     assert.ok(existsSync(path), "file should exist")
     const md = readFileSync(path, "utf8")
-    assert.match(md, /^---\nid: task-007\n/)
+    assert.equal(path, resolve(cwd, "work", "items", "parking-lot", "01KT7BEG3WWXEW1CNFD7MMK5GA-park-gnarly-thing.md"))
+    assert.match(md, /^---\nid: 01KT7BEG3WWXEW1CNFD7MMK5GA\n/)
+    assert.match(md, /origin: parked/)
     assert.match(md, /status: To Do/)
-    const nextId = readFileSync(resolve(cwd, "backlog", ".next-id"), "utf8").trim()
-    assert.equal(nextId, "8")
+    assert.equal(existsSync(resolve(cwd, "backlog", ".next-id")), false)
   } finally {
     rmSync(cwd, { recursive: true, force: true })
   }
@@ -200,7 +205,7 @@ test("writeBacklogItem replaces an older slug for the same id", async () => {
   const cwd = mkTmpRepo()
   try {
     const a = {
-      id: "task-001",
+      id: "01KT7BEG3WWXEW1CNFD7MMK5GA",
       title: "Old title",
       status: "to-do",
       createdAt: "2026-05-30T12:00:00.000Z",
@@ -208,7 +213,7 @@ test("writeBacklogItem replaces an older slug for the same id", async () => {
     mod.writeBacklogItem(a, { cwd })
     const b = { ...a, title: "New title" }
     mod.writeBacklogItem(b, { cwd })
-    const dir = resolve(cwd, "backlog")
+    const dir = resolve(cwd, "work", "items", "parking-lot")
     const files = readdirSync(dir).filter(n => n.endsWith(".md"))
     assert.equal(files.length, 1, "only one .md file should remain for the id")
     assert.match(files[0], /new-title/)
@@ -223,14 +228,14 @@ test("patchBacklogStatus updates only the frontmatter status line", async () => 
   try {
     mod.writeBacklogItem(
       {
-        id: "task-001",
+        id: "01KT7BEG3WWXEW1CNFD7MMK5GA",
         title: "Promote me",
         status: "to-do",
         createdAt: "2026-05-30T12:00:00.000Z",
       },
       { cwd },
     )
-    const patched = mod.patchBacklogStatus("task-001", "in-progress", { cwd })
+    const patched = mod.patchBacklogStatus("01KT7BEG3WWXEW1CNFD7MMK5GA", "in-progress", { cwd })
     assert.ok(patched, "should return the patched path")
     const md = readFileSync(patched, "utf8")
     assert.match(md, /status: In Progress/)
@@ -246,7 +251,7 @@ test("removeBacklogFile deletes the file for the given id", async () => {
   try {
     const path = mod.writeBacklogItem(
       {
-        id: "task-001",
+        id: "01KT7BEG3WWXEW1CNFD7MMK5GA",
         title: "Doomed",
         status: "to-do",
         createdAt: "2026-05-30T12:00:00.000Z",
@@ -254,11 +259,11 @@ test("removeBacklogFile deletes the file for the given id", async () => {
       { cwd },
     )
     assert.ok(existsSync(path))
-    const removed = mod.removeBacklogFile("task-001", { cwd })
+    const removed = mod.removeBacklogFile("01KT7BEG3WWXEW1CNFD7MMK5GA", { cwd })
     assert.equal(removed, path)
     assert.equal(existsSync(path), false)
     // Second remove returns undefined cleanly.
-    assert.equal(mod.removeBacklogFile("task-001", { cwd }), undefined)
+    assert.equal(mod.removeBacklogFile("01KT7BEG3WWXEW1CNFD7MMK5GA", { cwd }), undefined)
   } finally {
     rmSync(cwd, { recursive: true, force: true })
   }
@@ -271,7 +276,7 @@ test("readBacklogDir returns items written by a different session", async () => 
     // Simulate "session A" writing two items.
     mod.writeBacklogItem(
       {
-        id: "task-001",
+        id: "01KT7BEG3WWXEW1CNFD7MMK5GA",
         title: "First",
         status: "to-do",
         priority: "high",
@@ -282,7 +287,7 @@ test("readBacklogDir returns items written by a different session", async () => 
     )
     mod.writeBacklogItem(
       {
-        id: "task-002",
+        id: "01KT7BEG3XS1CS74GARG22YM7R",
         title: "Second",
         status: "in-progress",
         priority: "low",
@@ -293,11 +298,11 @@ test("readBacklogDir returns items written by a different session", async () => 
     // "Session B" reads with a fresh empty in-memory session log.
     const items = mod.readBacklogDir({ cwd })
     assert.equal(items.length, 2)
-    assert.equal(items[0].id, "task-001")
+    assert.equal(items[0].id, "01KT7BEG3WWXEW1CNFD7MMK5GA")
     assert.equal(items[0].status, "to-do")
     assert.equal(items[0].priority, "high")
     assert.deepEqual(items[0].labels, ["x"])
-    assert.equal(items[1].id, "task-002")
+    assert.equal(items[1].id, "01KT7BEG3XS1CS74GARG22YM7R")
     assert.equal(items[1].status, "in-progress")
     assert.equal(items[1].priority, "low")
   } finally {
@@ -310,7 +315,7 @@ test("parseBacklogFrontmatter ignores non-backlog files and malformed input", as
   assert.equal(mod.parseBacklogFrontmatter(""), undefined)
   assert.equal(mod.parseBacklogFrontmatter("# not a backlog file"), undefined)
   assert.equal(
-    mod.parseBacklogFrontmatter("---\nid: task-001\n---\n"),
+    mod.parseBacklogFrontmatter("---\nid: 01KT7BEG3WWXEW1CNFD7MMK5GA\n---\n"),
     undefined,
     "missing required fields rejected",
   )
@@ -320,7 +325,7 @@ test("backlog_list documents that it reads disk too (task-017)", () => {
   const src = readFileSync(resolve(ROOT, "extensions/software-engineering.ts"), "utf8")
   assert.match(
     src,
-    /Reads both the current session log and on-disk backlog\/ files/,
+    /Reads both the current session log and on-disk work\/items\/parking-lot\/ files/,
     "backlog_list description does not advertise cross-session disk read",
   )
   assert.match(src, /readBacklogDir\(\{ cwd: ctx\.cwd \}\)/, "backlog_list does not call readBacklogDir")

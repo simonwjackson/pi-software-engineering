@@ -1,6 +1,9 @@
 ---
-id: task-003
+id: 01KSRGFP02WJBDFB4RCWC1ABM8
+slug: lift-scripty-skills-to-pi-tools
 title: Lift scripty SE skills to `pi.registerTool` wrappers
+origin: parked
+legacy: task-003
 status: To Do
 priority: high
 labels:
@@ -11,11 +14,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Lift scripty SE skills to `pi.registerTool` wrappers

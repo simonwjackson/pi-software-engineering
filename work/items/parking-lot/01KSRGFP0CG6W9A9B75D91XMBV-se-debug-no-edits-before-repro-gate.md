@@ -1,6 +1,9 @@
 ---
-id: task-013
+id: 01KSRGFP0CG6W9A9B75D91XMBV
+slug: se-debug-no-edits-before-repro-gate
 title: Enforce `se-debug`'s "no edits before diagnosis" via `tool_call` gate
+origin: parked
+legacy: task-013
 status: To Do
 priority: medium
 labels:
@@ -11,11 +14,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Enforce `se-debug`'s "no edits before diagnosis" via `tool_call` gate

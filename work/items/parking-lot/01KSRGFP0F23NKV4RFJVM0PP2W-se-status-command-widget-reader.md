@@ -1,6 +1,9 @@
 ---
-id: task-016
+id: 01KSRGFP0F23NKV4RFJVM0PP2W
+slug: se-status-command-widget-reader
 title: Ship `/se-status`, the ambient SE widget, and a `se_read_state` tool
+origin: parked
+legacy: task-016
 status: To Do
 priority: high
 labels:
@@ -12,11 +15,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Ship `/se-status`, the ambient SE widget, and a `se_read_state` tool

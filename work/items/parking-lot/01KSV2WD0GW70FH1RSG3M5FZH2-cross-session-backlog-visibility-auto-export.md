@@ -1,6 +1,9 @@
 ---
-id: task-017
+id: 01KSV2WD0GW70FH1RSG3M5FZH2
+slug: cross-session-backlog-visibility-auto-export
 title: Make backlog cross-session-visible via auto-export on mutation
+origin: parked
+legacy: task-017
 status: To Do
 priority: high
 labels:
@@ -10,10 +13,6 @@ labels:
 created: 2026-05-30
 source: user
 context:
-  cwd: .
-  branch: main
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Make backlog cross-session-visible via auto-export on mutation
@@ -24,7 +23,7 @@ Today the SE backlog uses the current session's log as the sole source of truth 
 
 The consequence: **items added in session A are invisible to session B**, even when both sessions run inside the same repo and the user has been actively using the backlog. New sessions start blind. Promotions and removals made in another session do not propagate.
 
-This was flagged as the open question in `backlog/task-001`:
+This was flagged as the open question in `./01KSRGFP00WTNB7G4F7V3TM6TG-move-se-state-into-pi-session-log`:
 
 > "whether the on-disk `backlog/` directory should be auto-exported on every mutation (familiar Git-tracked feel, but reintroduces churn) or only on explicit `backlog_export` (cleaner, but requires user intent to share across machines)."
 
@@ -68,7 +67,7 @@ Auto-export on every backlog mutation. The on-disk `backlog/<id> - <slug>.md` fi
 - `extensions/se-state-backlog-export.ts` (`renderBacklogMarkdown`, `backlogFilename`, `exportBacklog`)
 - `skills/se-backlog/SKILL.md`
 - `docs/SE-STATE.md`
-- `backlog/task-001 - move-se-state-into-pi-session-log.md` (the prior open question)
+- `./01KSRGFP00WTNB7G4F7V3TM6TG-move-se-state-into-pi-session-log - move-se-state-into-pi-session-log.md` (the prior open question)
 
 ## Notes
 

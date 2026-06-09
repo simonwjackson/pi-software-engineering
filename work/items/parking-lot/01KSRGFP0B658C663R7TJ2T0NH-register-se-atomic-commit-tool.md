@@ -1,6 +1,9 @@
 ---
-id: task-012
+id: 01KSRGFP0B658C663R7TJ2T0NH
+slug: register-se-atomic-commit-tool
 title: Register `se_atomic_commit` tool with conventional-commit and RED-state enforcement
+origin: parked
+legacy: task-012
 status: To Do
 priority: high
 labels:
@@ -12,11 +15,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Register `se_atomic_commit` tool with conventional-commit and RED-state enforcement

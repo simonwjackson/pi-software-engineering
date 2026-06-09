@@ -1,6 +1,9 @@
 ---
-id: task-006
+id: 01KSRGFP0503PY8KQKV2DVW0NM
+slug: cheap-judge-model-provider
 title: Add a cheap-judge model provider for SE review/judge calls
+origin: parked
+legacy: task-006
 status: To Do
 priority: medium
 labels:
@@ -11,11 +14,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Add a cheap-judge model provider for SE review/judge calls

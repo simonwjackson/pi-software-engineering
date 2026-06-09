@@ -1,6 +1,9 @@
 ---
-id: task-001
+id: 01KSRGFP00WTNB7G4F7V3TM6TG
+slug: move-se-state-into-pi-session-log
 title: Move SE state and the backlog itself off-disk into the Pi session log
+origin: parked
+legacy: task-001
 status: To Do
 priority: high
 labels:
@@ -12,11 +15,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Move SE state and the backlog itself off-disk into the Pi session log
@@ -55,8 +53,8 @@ These two upgrades are intentionally captured together. #2 is the storage substr
 - [ ] On `session_start` the extension replays its own entries and rebuilds in-memory state before the first turn runs. Replay is deterministic — last entry per (type, id) wins.
 - [ ] `/compact` and `/fork` are exercised end-to-end and SE state survives both (worktree binding, current phase, backlog items still visible afterwards).
 - [ ] The `se-backlog` skill stops being a Markdown-file workflow by default. Capture, list, refine, promote, and prune all go through three new registered tools (`backlog_add`, `backlog_list`, `backlog_promote`) backed by `se:backlog` / `se:backlog:promoted` entries. TypeBox schemas reject malformed items at the harness boundary, not in skill prose.
-- [ ] An explicit, optional `backlog_export` path writes the live entry set to `backlog/task-NNN - title.md` files on demand, preserving the existing on-disk format for portability and Git-based audit. Export is a deliberate action, not background churn.
-- [ ] `backlog/.next-id` continues to be the source of truth for ID allocation when exporting, so IDs remain monotonically increasing and never reused across the file and log representations.
+- [ ] An explicit, optional `backlog_export` path writes the live entry set to `work/items/parking-lot/<id>-<slug>.md` files on demand, preserving the parking-lot format for portability and Git-based audit. Export is a deliberate action, not background churn.
+- [ ] Parking-lot IDs are coordination-free ULIDs; no `.next-id` file or repo-local counter is introduced.
 - [ ] The `se-backlog` SKILL.md is updated so its "Storage" and "Lifecycle" sections describe the session-log-first model and treat the on-disk backlog as an export target, not the primary store.
 - [ ] At least one other SE skill is migrated to the new substrate as a second consumer — most likely `se-work` for `se:phase` and `se:worktree`, or the residual-findings gate in `references/shipping-workflow.md` for `se:review-residuals`. The second consumer proves the entry catalogue and helpers generalize beyond backlog.
 - [ ] A short note in `docs/` (or the package README) tells future contributors: SE state lives in the session log; the `software-engineering.ts` extension owns the entry catalogue; new SE skills should add a typed entry rather than a scratch file.

@@ -1,6 +1,9 @@
 ---
-id: task-015
+id: 01KSRGFP0EZARCT67RF805RTJE
+slug: test-state-bash-wrapper
 title: Wrap local bash to capture test-runner exit state into `se:test-state`
+origin: parked
+legacy: task-015
 status: To Do
 priority: high
 labels:
@@ -12,11 +15,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Wrap local bash to capture test-runner exit state into `se:test-state`

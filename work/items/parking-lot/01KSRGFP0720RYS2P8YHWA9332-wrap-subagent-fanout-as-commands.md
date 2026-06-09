@@ -1,6 +1,9 @@
 ---
-id: task-008
+id: 01KSRGFP0720RYS2P8YHWA9332
+slug: wrap-subagent-fanout-as-commands
 title: Wrap subagent persona fan-out as deterministic SE commands
+origin: parked
+legacy: task-008
 status: To Do
 priority: medium
 labels:
@@ -11,11 +14,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Wrap subagent persona fan-out as deterministic SE commands

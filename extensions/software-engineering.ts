@@ -181,7 +181,7 @@ const BacklogListSchema = Type.Object({
 })
 
 const BacklogPromoteSchema = Type.Object({
-  id: Type.String({ description: "Backlog item id (e.g. 'task-007')." }),
+  id: Type.String({ description: "Backlog item id (ULID, e.g. '01KT7BEG3WWXEW1CNFD7MMK5GA')." }),
   target: Type.Union(
     [
       Type.Literal("se-work"),
@@ -362,7 +362,7 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     name: "backlog_add",
     label: "Backlog: Add",
     description:
-      "Capture a deferred-but-actionable engineering follow-up into the SE backlog. Writes a session-log entry AND a backlog/<id> - <slug>.md file so the item is visible to other sessions immediately. Use ambiently from other SE skills; do not interrupt the parent skill's flow to ask whether to capture.",
+      "Capture a deferred-but-actionable engineering follow-up into the SE backlog. Writes a session-log entry AND a work/items/parking-lot/<id>-<slug>.md file so the item is visible to other sessions immediately. Use ambiently from other SE skills; do not interrupt the parent skill's flow to ask whether to capture.",
     promptSnippet: "Capture a deferred follow-up into the SE backlog",
     promptGuidelines: [
       "Call backlog_add when the user says 'park this', 'add to the backlog', 'save for later', or when another SE skill discovers real but out-of-scope work.",
@@ -393,7 +393,7 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
       const created = ctx
         ? addBacklog(pi, ctx, partial, floor)
         : addBacklog(pi, { sessionManager: { getEntries: () => [] } } as never, partial, floor)
-      // task-017: also write to disk so other sessions see this item.
+      // Also write to the parking lot so other sessions see this item.
       if (ctx?.cwd) {
         try {
           writeBacklogItem(created, { cwd: ctx.cwd })
@@ -418,7 +418,7 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     name: "backlog_list",
     label: "Backlog: List",
     description:
-      "List active SE backlog items. Reads both the current session log and on-disk backlog/ files (so items added in other sessions are visible). Optionally filter by status, label, or source.",
+      "List active SE backlog items. Reads both the current session log and on-disk work/items/parking-lot/ files (so items added in other sessions are visible). Optionally filter by status, label, or source.",
     promptSnippet: "List active SE backlog items",
     promptGuidelines: [
       "Call backlog_list when the user asks 'what's in the backlog', 'what did we defer', 'show parked work', or wants to pick up an item next.",
@@ -430,7 +430,7 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
         return { content: [{ type: "text", text: "No session context" }], isError: true }
       }
       const p = params as typeof BacklogListSchema.static
-      // task-017: merge session log (current-session truth) with on-disk
+      // Merge session log (current-session truth) with on-disk parking-lot
       // files (cross-session truth). Per-id, session log wins because it
       // holds the freshest in-flight status changes for this session.
       const sessionItems = readBacklogActive(ctx)
@@ -463,14 +463,14 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
       "Mark a backlog item as promoted to active execution. Records target (se-work, se-plan, se-debug, or other). Does not remove the item — promotion entries are append-only audit and update status to 'in-progress' on read.",
     promptSnippet: "Promote a backlog item into active work",
     promptGuidelines: [
-      "Use backlog_promote when the user says 'turn that into work', 'plan this backlog item', or 'pick up task-NNN'.",
+      "Use backlog_promote when the user says 'turn that into work', 'plan this backlog item', or references a parked work id.",
       "Choose target by item shape: small and clear → 'se-work'; multi-step or architectural → 'se-plan'; bug → 'se-debug'.",
     ],
     parameters: BacklogPromoteSchema,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const p = params as typeof BacklogPromoteSchema.static
       promoteBacklog(pi, p.id, p.target, p.note)
-      // task-017: keep disk in sync so other sessions see the promotion.
+      // Keep disk in sync so other sessions see the promotion.
       if (ctx?.cwd) {
         try {
           patchBacklogStatus(p.id, "in-progress", { cwd: ctx.cwd })
@@ -499,13 +499,13 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     promptSnippet: "Remove a landed or dropped backlog item",
     promptGuidelines: [
       "Use backlog_remove when the work has landed (PR merged) or the user explicitly drops the item.",
-      "Provide a meaningful reason: 'landed in #142', 'superseded by task-019', 'no longer relevant'. The reason is persisted to the session log.",
+      "Provide a meaningful reason: 'landed in #142', 'superseded by 01KT7BEG3WWXEW1CNFD7MMK5GA', 'no longer relevant'. The reason is persisted to the session log.",
     ],
     parameters: BacklogRemoveSchema,
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const p = params as typeof BacklogRemoveSchema.static
       removeBacklog(pi, p.id, p.reason)
-      // task-017: drop the disk file too so it disappears from other sessions.
+      // Drop the parking-lot file too so it disappears from other sessions.
       if (ctx?.cwd) {
         try {
           removeBacklogFile(p.id, { cwd: ctx.cwd })
@@ -525,10 +525,10 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
     name: "backlog_export",
     label: "Backlog: Export to disk",
     description:
-      "Render active backlog items to backlog/<id> - <slug>.md files, preserving the existing on-disk format for portability and Git-based audit. Use when the user explicitly asks to share the backlog across machines or commit the current set. Skips files that already exist unless overwrite is true.",
-    promptSnippet: "Export the active backlog to backlog/ markdown files",
+      "Render active backlog items to work/items/parking-lot/<id>-<slug>.md files, preserving the parking-lot format for portability and Git-based audit. Use when the user explicitly asks to share the backlog across machines or commit the current set. Skips files that already exist unless overwrite is true.",
+    promptSnippet: "Export the active backlog to work/items/parking-lot/ markdown files",
     promptGuidelines: [
-      "Use backlog_export only on explicit user intent (e.g. 'export the backlog', 'write backlog to disk', 'commit the current backlog'). Do not auto-export after every mutation.",
+      "Use backlog_export only on explicit user intent (e.g. 'export the backlog', 'write parking lot to disk', 'commit the current backlog'). Do not auto-export after every mutation.",
       "Pass overwrite=true only when the user wants to regenerate existing files (e.g. after editing items in the log).",
     ],
     parameters: BacklogExportSchema,
@@ -542,7 +542,6 @@ export default function softwareEngineeringExtension(pi: ExtensionAPI) {
       const lines = [
         `Exported ${res.written.length} item(s) to ${res.dir}`,
         res.skipped.length > 0 ? `Skipped ${res.skipped.length} existing file(s); pass overwrite=true to replace` : "",
-        `Next id: ${res.nextId}`,
       ].filter(Boolean)
       return { content: [{ type: "text", text: lines.join("\n") }], details: res }
     },

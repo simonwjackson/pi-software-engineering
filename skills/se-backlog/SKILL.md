@@ -33,29 +33,25 @@ Ask only when the item value, destination, duplicate handling, promotion target,
 Backlog state lives in two places that are kept in sync automatically:
 
 1. **Pi session log** — per-session runtime substrate. Survives `/compact`, `/fork`, restart, and worktree changes.
-2. **`backlog/<id> - <slug>.md` files on disk** — cross-session source of truth. Every `backlog_add` / `backlog_promote` / `backlog_remove` writes/patches/deletes the matching file immediately. Items captured in one session are visible to another session reading the same repo without needing an explicit export.
+2. **`work/items/parking-lot/<id>-<slug>.md` files on disk** — cross-session parking lot for ungraduated work. Every `backlog_add` / `backlog_promote` / `backlog_remove` writes/patches/deletes the matching file immediately. Items captured in one session are visible to another session reading the same repo without needing an explicit export.
 
 | Tool | Purpose |
 |---|---|
-| `backlog_add` | Capture a new item. Appends a session-log entry AND writes `backlog/<id> - <slug>.md`. Allocates monotonically, never reuses removed ids. |
-| `backlog_list` | List active items. Reads both the current session log and on-disk `backlog/` files; merges by id (session log wins for in-flight changes). |
-| `backlog_promote` | Mark an item promoted to `se-work`, `se-plan`, `se-debug`, or `other`. Appends a promotion entry AND patches the disk file's `status:` line to `In Progress`. |
-| `backlog_remove` | Append a removal entry AND delete the disk file. The id is never reissued. Use after work lands or the user explicitly drops the item. |
-| `backlog_export` | Bulk re-render the active items to `backlog/<id> - <slug>.md`. Use after manually editing entries, after pulling from another machine, or to repair drift. Skips existing files unless `overwrite=true`. Updates `backlog/.next-id`. |
+| `backlog_add` | Capture a new item. Appends a session-log entry AND writes `work/items/parking-lot/<id>-<slug>.md`. Mints a coordination-free time-sortable id; no counters. |
+| `backlog_list` | List active parked items. Reads both the current session log and on-disk `work/items/parking-lot/` files; merges by id (session log wins for in-flight changes). |
+| `backlog_promote` | Mark a parked item promoted to `se-work`, `se-plan`, `se-debug`, or `other`. Appends a promotion entry AND patches the parking-lot file's `status:` line to `In Progress`. Promotion records intent; the folder is born only when the first real artifact is written. |
+| `backlog_remove` | Append a removal entry AND delete the parking-lot file. Use after ungraduated work lands or the user explicitly drops the item. |
+| `backlog_export` | Bulk re-render active parked items to `work/items/parking-lot/<id>-<slug>.md`. Use after manually editing entries, after pulling from another machine, or to repair drift. Skips existing files unless `overwrite=true`. |
 
 **Why disk sync.** The backlog is the one SE entry type whose value is durable, cross-session follow-up work. Without disk sync, items captured in session A are invisible to session B — which defeats the point. The per-mutation file write is the documented cost paid to deliver cross-session visibility. All other `se:*` state (phase, worktree, test-state, residuals, repro) stays session-log-only; the backlog is the exception, not the precedent.
 
-**Working-tree churn.** Each park/promote/prune touches `backlog/*.md` and shows up as a working-tree change. This is intentional. If you want to suppress noise during an active slice, defer commits of `backlog/` until you reach a natural checkpoint.
+**Working-tree churn.** Each park/promote/prune touches `work/items/parking-lot/*.md` and shows up as a working-tree change. This is intentional. If you want to suppress noise during an active slice, defer commits of parking-lot changes until you reach a natural checkpoint.
 
-**Detection order for the export target:**
+**Export target.** The export target is `work/items/parking-lot/` at the repository root. Do not export under `docs/` (durable knowledge) or `.context/software-engineering/` (local scratch).
 
-1. If the repo already has a `backlog/` or `.backlog/` directory or `backlog.config.yml`, export into the existing layout.
-2. Otherwise, default to `backlog/` at the repository root.
-3. Do not export under `docs/` (durable knowledge) or `.context/software-engineering/` (local scratch).
+**ID allocation.** `backlog_add` mints a fresh time-sortable id (ULID). There is no `.next-id`, no max-scan, and no counter to coordinate across worktrees. The id is stable from birth; filenames stay repo-portable: lowercase slug, no absolute paths.
 
-**ID allocation.** `backlog_add` reads the highest id across active and removed entries in the session log AND `backlog/.next-id` (when the file exists). The greater value plus one becomes the new id. `backlog/.next-id` is bumped on every `backlog_add` and `backlog_export`. **Never decrement, never reuse a retired ID** — references in commits, PRs, and plans must keep pointing at exactly one thing. Filenames stay repo-portable: lowercase slug, no absolute paths.
-
-**Migration from an existing on-disk backlog.** If the repo already has `backlog/task-NNN - *.md` files, they remain a valid Git-tracked artifact and are honored as cross-session state immediately — they show up in `backlog_list` for any session reading the repo.
+**Migration from an existing on-disk backlog.** Legacy `backlog/task-NNN - *.md` files should be migrated once into `work/items/parking-lot/<id>-<slug>.md` with the old task id preserved as `legacy: task-NNN`. The live tools use the work layout; do not create new legacy backlog files.
 
 ## Item Format
 
@@ -63,7 +59,9 @@ Preserve an existing repo's backlog item format when one is present. For a new b
 
 ```md
 ---
-id: task-001
+id: 01KT7BEG3WWXEW1CNFD7MMK5GA
+slug: short-action-oriented-title
+origin: parked
 title: Short action-oriented title
 status: To Do
 priority: medium
@@ -155,7 +153,7 @@ Triggered by phrases like:
 - "turn that into work"
 - "let's do this backlog item"
 - "plan this backlog item"
-- "pick up task-012"
+- "pick up 01KT7BEG3WWXEW1CNFD7MMK5GA"
 
 Promotion path:
 
@@ -177,7 +175,7 @@ Review stale items and recommend keep / promote / remove. Ask before any destruc
 
 ## Lifecycle
 
-The backlog is a parking lot, not a record. Completed and abandoned items are **removed**, not archived. Git history (`git log -- backlog/`) is the audit trail.
+The backlog is the ungraduated parking lot, not the permanent record. Completed and abandoned ungraduated items are **removed**, not archived. Git history (`git log -- work/items/parking-lot/`) is the audit trail. Once a parked item graduates into `work/items/active/<id>-<slug>/`, the graduated folder is archived on terminal state instead of deleted.
 
 **Remove when:**
 
@@ -192,11 +190,11 @@ The backlog is a parking lot, not a record. Completed and abandoned items are **
 
 **Before removing a completed item, promote any durable knowledge it produced** — reusable patterns, gotchas, decisions, non-obvious context — to `docs/solutions/` via `se-compound`. The solution doc is the record; the backlog file is not.
 
-**ID handling on removal:** the file goes, the ID does not come back. `backlog/.next-id` is never decremented. A future `task-042` will never collide with a removed `task-042`.
+**ID handling on removal:** the file goes, and the ULID is never reused by construction. Do not introduce a counter or `.next-id` file.
 
 **Confirmation before destructive removal:** when removing more than one item at a time, or when removing an item that has any external reference (PR, plan, commit) the skill knows about, ask the user once with the list before deleting.
 
-Report removals as a short line: `Removed: task-007 (landed in #142), task-011 (dropped: superseded by task-019)`.
+Report removals as a short line: `Removed: 01KT7BEG3WWXEW1CNFD7MMK5GA (landed in #142), 01KT7BEG3XS1CS74GARG22YM7R (dropped: superseded by 01KT7BEG3Y04QY4G8PPW920F36)`.
 
 ## Capture Rules
 
@@ -219,7 +217,7 @@ The pre-capture inspection is cheap and bounded. Its purpose is to make a delibe
 
 **Procedure:**
 
-1. List the backlog directory (`ls backlog/` or the configured location). This is always cheap.
+1. List the parking lot (`ls work/items/parking-lot/`). This is always cheap.
 2. Identify **overlap candidates** — existing items that share any of:
    - Word stems with the draft title or filename slug.
    - Labels the new item would carry.
@@ -326,7 +324,7 @@ Be concise. The user usually wants confidence that the follow-up was captured, n
 For capture, respond with:
 
 ```md
-Captured in backlog: `backlog/task-001 - short-title.md`
+Captured in backlog: `work/items/parking-lot/01KT7BEG3WWXEW1CNFD7MMK5GA-short-title.md`
 
 Why it matters: one sentence.
 ```

@@ -1,6 +1,9 @@
 ---
-id: task-002
+id: 01KSRGFP017T5MSC4ZE8TVMWFR
+slug: skill-frontmatter-sweep
 title: Sweep skill frontmatter — compatibility, allowed-tools, disable-model-invocation, argument-hint
+origin: parked
+legacy: task-002
 status: To Do
 priority: medium
 labels:
@@ -11,11 +14,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Sweep skill frontmatter — compatibility, allowed-tools, disable-model-invocation, argument-hint

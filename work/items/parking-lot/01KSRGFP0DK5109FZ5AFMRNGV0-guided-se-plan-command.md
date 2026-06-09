@@ -1,6 +1,9 @@
 ---
-id: task-014
+id: 01KSRGFP0DK5109FZ5AFMRNGV0
+slug: guided-se-plan-command
 title: Replace `se-plan` prose runbook with a guided `/se-plan` command
+origin: parked
+legacy: task-014
 status: Dropped
 priority: medium
 labels:
@@ -12,11 +15,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Replace `se-plan` prose runbook with a guided `/se-plan` command

@@ -1,6 +1,9 @@
 ---
-id: task-010
+id: 01KSRGFP09W0PBCEE14TMAXFPB
+slug: se-review-theme
 title: Ship an `se-review` theme tuned for review/finding readability
+origin: parked
+legacy: task-010
 status: To Do
 priority: low
 labels:
@@ -11,11 +14,6 @@ labels:
 created: 2026-05-29
 source: user
 context:
-  cwd: .
-  branch: main
-  commit: b69c9f7
-  repo: simonwjackson/pi-software-engineering
-  invoked_by: user
 ---
 
 # Ship an `se-review` theme tuned for review/finding readability
