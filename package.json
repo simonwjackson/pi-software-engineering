@@ -27,7 +27,7 @@
     "themes"
   ],
   "scripts": {
-    "test": "node --test tests/*.mjs",
+    "test": "bun test tests/",
     "check": "npm test && npm pack --dry-run"
   },
   "dependencies": {
