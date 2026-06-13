@@ -10,6 +10,7 @@ test("se-tools/index.ts wires up registerSeTools", () => {
   assert.match(src, /export function registerSeTools/)
   assert.match(src, /registerCleanGoneTool/)
   assert.match(src, /registerSessionTools/)
+  assert.match(src, /registerDeviceRebuildTool/)
 })
 
 test("se-clean-gone tool wraps the existing skill script", () => {
@@ -31,6 +32,24 @@ test("se-sessions registers the three documented tools", () => {
   for (const t of ["se_session_list", "se_session_skeleton", "se_session_errors"]) {
     assert.match(src, new RegExp(`name:\\s*"${t}"`), `missing tool ${t}`)
   }
+})
+
+test("device_nixos_rebuild registers as a typed PI tool", () => {
+  const src = readFileSync(resolve(ROOT, "extensions/se-tools/se-device-rebuild.ts"), "utf8")
+  assert.match(src, /name:\s*"device_nixos_rebuild"/)
+  assert.match(src, /pi\.registerTool/)
+  assert.match(src, /device:\s*Type\.Union\(\[Type\.Literal\("bandai"\)\]/)
+  assert.match(src, /action:\s*Type\.Optional/)
+  assert.match(src, /dryRun:\s*Type\.Optional/)
+})
+
+test("device_nixos_rebuild encodes bandai Thor rebuild defaults", () => {
+  const src = readFileSync(resolve(ROOT, "extensions/se-tools/se-device-rebuild.ts"), "utf8")
+  assert.match(src, /flakeAttr:\s*"\.\#korri-thor-kiosk"/)
+  assert.match(src, /buildHost:\s*"fuji"/)
+  assert.match(src, /targetHost:\s*"bandai-guest-ip"/)
+  assert.match(src, /sshConfig:\s*"\/tmp\/bandai-deploy\/ssh_config_ip"/)
+  assert.match(src, /nixos-rebuild/)
 })
 
 test("se_session_list TypeBox parameters cover repo, since, platform", () => {
