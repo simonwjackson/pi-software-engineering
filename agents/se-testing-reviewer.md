@@ -1,7 +1,7 @@
 ---
 name: se-testing-reviewer
 description: Always-on code-review persona. Reviews code for test coverage gaps, weak assertions, brittle implementation-coupled tests, and missing edge case coverage.
-model: claude-sonnet-4-6
+model: gpt-5.5
 ---
 
 # Testing Reviewer

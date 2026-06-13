@@ -1,7 +1,7 @@
 ---
 name: se-previous-comments-reviewer
 description: Conditional code-review persona, selected when reviewing a PR that has existing review comments or review threads. Checks whether prior feedback has been addressed in the current diff.
-model: claude-sonnet-4-6
+model: gpt-5.5
 ---
 
 # Previous Comments Reviewer

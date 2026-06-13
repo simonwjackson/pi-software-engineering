@@ -1,7 +1,7 @@
 ---
 name: se-maintainability-reviewer
 description: Always-on code-review persona. Reviews code for premature abstraction, unnecessary indirection, dead code, coupling between unrelated modules, and naming that obscures intent.
-model: claude-sonnet-4-6
+model: gpt-5.5
 ---
 
 # Maintainability Reviewer

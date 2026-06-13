@@ -1,7 +1,7 @@
 ---
 name: se-julik-frontend-races-reviewer
 description: Conditional code-review persona, selected when the diff touches async UI code, Stimulus/Turbo lifecycles, or DOM-timing-sensitive frontend behavior. Reviews code for race conditions and janky UI failure modes.
-model: claude-sonnet-4-6
+model: gpt-5.5
 ---
 
 # Julik Frontend Races Reviewer

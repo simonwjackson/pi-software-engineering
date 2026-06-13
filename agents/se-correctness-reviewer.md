@@ -1,7 +1,7 @@
 ---
 name: se-correctness-reviewer
 description: Always-on code-review persona. Reviews code for logic errors, edge cases, state management bugs, error propagation failures, and intent-vs-implementation mismatches.
-model: claude-sonnet-4-6
+model: gpt-5.5
 ---
 
 # Correctness Reviewer
