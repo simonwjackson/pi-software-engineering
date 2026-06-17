@@ -223,7 +223,7 @@ gh pr view <number-or-url> --json state,title,body,files
 Apply skip rules in order:
 
 - `state` is `CLOSED` or `MERGED` -> stop with message `PR is closed/merged; not reviewing.`
-- **Trivial-PR judgment**: spawn a lightweight sub-agent (use `model: "gpt-5.5"` when the platform supports per-agent overrides) with the PR title, body, and changed file paths. The agent's task: "Is this an automated or trivial PR that does not warrant a code review? Consider: dependency lock-file or manifest-only bumps, automated release commits, chore version increments with no substantive code changes. When in doubt, answer no — false negatives (skipped reviews that should have run) are more costly than false positives (unnecessary reviews)." If the judgment returns yes: stop with message `PR appears to be a trivial automated PR; not reviewing. Run without a PR argument to review the current branch, or pass base:<ref> if review is intended.`
+- **Trivial-PR judgment**: spawn a lightweight sub-agent (use `model: "openai-codex/gpt-5.5"` when the platform supports per-agent overrides) with the PR title, body, and changed file paths. The agent's task: "Is this an automated or trivial PR that does not warrant a code review? Consider: dependency lock-file or manifest-only bumps, automated release commits, chore version increments with no substantive code changes. When in doubt, answer no — false negatives (skipped reviews that should have run) are more costly than false positives (unnecessary reviews)." If the judgment returns yes: stop with message `PR appears to be a trivial automated PR; not reviewing. Run without a PR argument to review the current branch, or pass base:<ref> if review is intended.`
 
 When any skip rule fires, emit the message and stop without dispatching reviewers, switching the checkout, or running scope detection. **Standalone current-checkout mode and `base:` mode are unaffected** -- they always run the full review. **Draft PRs are reviewed normally** -- draft status is not a skip condition; early feedback on in-progress work is valuable.
 
@@ -400,7 +400,7 @@ Pass the resulting path list to the `project-standards` persona inside a `<stand
 
 #### Review model
 
-All persona reviewer agents run on `gpt-5.5`. The reviewer agent frontmatter pins this model, and dispatch calls should pass the same model explicitly when the platform supports per-agent overrides. Review findings are expensive to miss; keep code-review personas on this shared high-capability model rather than tiering individual reviewers down.
+All persona reviewer agents run on `openai-codex/gpt-5.5`. The reviewer agent frontmatter pins this model, and dispatch calls should pass the same model explicitly when the platform supports per-agent overrides. Review findings are expensive to miss; keep code-review personas on this shared high-capability model rather than tiering individual reviewers down.
 
 SE support agents that are not reviewer personas keep their own agent-level model setting unless their frontmatter says otherwise.
 
@@ -423,7 +423,7 @@ Pass `{run_id}` to every persona sub-agent so they can write their full analysis
 
 Omit the `mode` parameter when dispatching sub-agents so the user's configured permission settings apply. Do not pass `mode: "auto"`.
 
-**Model override at dispatch time.** Pass `model: "gpt-5.5"` on every persona reviewer dispatch when the platform supports per-agent overrides. In Claude Code, add `model: "gpt-5.5"` to the `Agent` tool call. In Codex, pass `gpt-5.5` on `spawn_agent`. In Pi, pass `gpt-5.5` on `subagent` via the `pi-subagents` extension. On platforms where the dispatch primitive has no model-override parameter or the model name is unrecognized, omit the override and rely on the reviewer agent frontmatter — a working review on the configured agent model beats a broken dispatch.
+**Model override at dispatch time.** Pass `model: "openai-codex/gpt-5.5"` on every persona reviewer dispatch when the platform supports per-agent overrides. In Claude Code, add `model: "openai-codex/gpt-5.5"` to the `Agent` tool call. In Codex, pass `openai-codex/gpt-5.5` on `spawn_agent`. In Pi, pass `openai-codex/gpt-5.5` on `subagent` via the `pi-subagents` extension. On platforms where the dispatch primitive has no model-override parameter or the model name is unrecognized, omit the override and rely on the reviewer agent frontmatter — a working review on the configured agent model beats a broken dispatch.
 
 **Bounded parallel dispatch.** Respect the current harness's active-subagent limit. Queue selected reviewers, dispatch only as many as the harness accepts, and fill freed slots as reviewers complete. Treat active-agent/thread/concurrency-limit spawn errors as backpressure, not reviewer failure: leave the reviewer queued and retry after a slot frees. Record a reviewer as failed only after a successful dispatch times out/fails, or when dispatch fails for a non-capacity reason.
 
@@ -565,7 +565,7 @@ When Stage 5b does not run, the merged finding set from Stage 5 flows through to
    - `validated: true` -> finding survives unchanged into the next phase (Stage 6 for headless/autofix, dispatch for interactive)
    - `validated: false` -> finding is dropped; record the validator's reason in Coverage
    - Validator failure (timeout, dispatch error, malformed JSON) -> drop the finding with reason "validator failed"; conservative bias is correct
-5. **Use `gpt-5.5` for validators.** Use the same model as the persona reviewers. Validators are read-only — same constraints as persona reviewers. They may use non-mutating inspection commands (Read, Grep, Glob, git blame, gh).
+5. **Use `openai-codex/gpt-5.5` for validators.** Use the same model as the persona reviewers. Validators are read-only — same constraints as persona reviewers. They may use non-mutating inspection commands (Read, Grep, Glob, git blame, gh).
 6. **Record metrics for Coverage.** Total dispatched, validated true count, validated false count (with reasons), failures, and over-budget drops.
 
 **Why per-finding bounded dispatch (not batched):** Independence is the point. A single batched validator looking at all findings together pattern-matches across them and recreates the persona-bias problem. Per-finding dispatch preserves fresh context while the scheduler respects harness limits. Per-file batching is a plausible future optimization for reviews with many findings clustered in few files; not implemented today.

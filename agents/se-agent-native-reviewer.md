@@ -1,7 +1,7 @@
 ---
 name: se-agent-native-reviewer
 description: Reviews code to ensure agent-native parity -- any action a user can take, an agent can also take. Use after adding UI features, agent tools, or system prompts.
-model: gpt-5.5
+model: openai-codex/gpt-5.5
 ---
 
 # Agent-Native Architecture Reviewer

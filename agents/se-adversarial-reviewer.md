@@ -1,7 +1,7 @@
 ---
 name: se-adversarial-reviewer
 description: Conditional code-review persona, selected when the diff is large (>=50 changed lines) or touches high-risk domains like auth, payments, data mutations, or external APIs. Actively constructs failure scenarios to break the implementation rather than checking against known patterns.
-model: gpt-5.5
+model: openai-codex/gpt-5.5
 ---
 
 # Adversarial Reviewer

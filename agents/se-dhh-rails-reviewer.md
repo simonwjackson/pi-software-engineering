@@ -1,7 +1,7 @@
 ---
 name: se-dhh-rails-reviewer
 description: Conditional code-review persona, selected when Rails diffs introduce architectural choices, abstractions, or frontend patterns that may fight the framework. Reviews code from an opinionated DHH perspective.
-model: gpt-5.5
+model: openai-codex/gpt-5.5
 ---
 
 # DHH Rails Reviewer

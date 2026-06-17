@@ -1,7 +1,7 @@
 ---
 name: se-data-migrations-reviewer
 description: Conditional code-review persona, selected when the diff touches migration files, schema changes, data transformations, or backfill scripts. Reviews code for data integrity and migration safety.
-model: gpt-5.5
+model: openai-codex/gpt-5.5
 ---
 
 # Data Migrations Reviewer
